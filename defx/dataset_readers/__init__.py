@@ -1,0 +1,1 @@
+from defx.dataset_readers.deft_subtask1_reader import DeftSubtask1Reader

@@ -2,3 +2,4 @@
 
 # pylint: disable=wildcard-import
 from defx.dataset_readers import *
+from defx.models import *
