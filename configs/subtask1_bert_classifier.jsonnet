@@ -1,38 +1,24 @@
 {
-  local token_emb_dim = 300,
+  local bert_model = "bert-base-uncased",
 
   "dataset_reader": {
     "type": "subtask1_reader",
     "token_indexers": {
-      "tokens": {
-        "type": "single_id",
-        "lowercase_tokens": true,
-      },
-    },
+      "bert": {
+        "type": "bert-pretrained",
+        "pretrained_model": bert_model,
+      }
+    }
   },
   "train_data_path": "data/subtask1/split/train.tsv",
   "validation_data_path": "data/subtask1/split/dev.tsv",
   "model": {
     "type": "subtask1_classifier_wrapper",
     "model": {
-      "type": "subtask1_basic_classifier",
-      "text_field_embedder": {
-        "token_embedders": {
-          "tokens": {
-            "type": "embedding",
-            "embedding_dim": token_emb_dim,
-            "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.txt.gz",
-            "trainable": false,
-          },
-        },
-      },
-      "seq2vec_encoder": {
-        "type": "cnn",
-        "embedding_dim": token_emb_dim,
-        "num_filters": 500,
-        "ngram_filter_sizes": [2, 3, 4],
-      },
-      "dropout": 0.5
+      "type": "bert_for_classification",
+      "bert_model": bert_model,
+      "dropout": 0.5,
+      "trainable": false,
     },
   },
   "iterator": {

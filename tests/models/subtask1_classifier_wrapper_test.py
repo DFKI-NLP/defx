@@ -1,7 +1,7 @@
 from allennlp.common.testing import ModelTestCase
 
 
-class Subtask1BasicClassifierTest(ModelTestCase):
+class Subtask1ClassifierWrapperTest(ModelTestCase):
     def setUp(self):
         super().setUp()
         self.set_up_model('tests/fixtures/subtask1_basic_classifier.jsonnet',

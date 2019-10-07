@@ -13,24 +13,27 @@
   "train_data_path": "data/subtask1/split/train.tsv",
   "validation_data_path": "data/subtask1/split/dev.tsv",
   "model": {
-    "type": "subtask1_basic_classifier",
-    "text_field_embedder": {
-      "token_embedders": {
-        "tokens": {
-          "type": "embedding",
-          "embedding_dim": token_emb_dim,
-          "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.50d.txt.gz",
-          "trainable": false,
+    "type": "subtask1_classifier_wrapper",
+    "model": {
+      "type": "subtask1_basic_classifier",
+      "text_field_embedder": {
+        "token_embedders": {
+          "tokens": {
+            "type": "embedding",
+            "embedding_dim": token_emb_dim,
+            "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.50d.txt.gz",
+            "trainable": false,
+          },
         },
       },
+      "seq2vec_encoder": {
+        "type": "cnn",
+        "embedding_dim": token_emb_dim,
+        "num_filters": 500,
+        "ngram_filter_sizes": [2, 3, 4],
+      },
+      "dropout": 0.5
     },
-    "seq2vec_encoder": {
-      "type": "cnn",
-      "embedding_dim": token_emb_dim,
-      "num_filters": 500,
-      "ngram_filter_sizes": [2, 3, 4],
-    },
-    "dropout": 0.5
   },
   "iterator": {
     "type": "basic",

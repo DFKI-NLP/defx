@@ -13,23 +13,26 @@
   "train_data_path": "tests/fixtures/deft_subtask1_sample.deft",
   "validation_data_path": "tests/fixtures/deft_subtask1_sample.deft",
   "model": {
-    "type": "subtask1_basic_classifier",
-    "text_field_embedder": {
-      "token_embedders": {
-        "tokens": {
-          "type": "embedding",
-          "embedding_dim": token_emb_dim,
-          "trainable": false,
+    "type": "subtask1_classifier_wrapper",
+    "model": {
+      "type": "basic_classifier",
+      "text_field_embedder": {
+        "token_embedders": {
+          "tokens": {
+            "type": "embedding",
+            "embedding_dim": token_emb_dim,
+            "trainable": false,
+          },
         },
       },
-    },
-    "seq2vec_encoder": {
-      "type": "cnn",
-      "embedding_dim": token_emb_dim,
-      "num_filters": 2,
-      "ngram_filter_sizes": [1, 2],
-    },
-    "dropout": 0.5
+      "seq2vec_encoder": {
+        "type": "cnn",
+        "embedding_dim": token_emb_dim,
+        "num_filters": 2,
+        "ngram_filter_sizes": [1, 2],
+      },
+      "dropout": 0.5
+    }
   },
   "iterator": {
     "type": "basic",
