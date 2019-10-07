@@ -1,5 +1,5 @@
 {
-  local token_emb_dim = 300,
+  local token_emb_dim = 50,
 
   "dataset_reader": {
     "type": "subtask1_reader",
@@ -19,7 +19,7 @@
         "tokens": {
           "type": "embedding",
           "embedding_dim": token_emb_dim,
-          "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.txt.gz",
+          "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.50d.txt.gz",
           "trainable": false,
         },
       },
@@ -46,7 +46,6 @@
     "num_epochs": 100,
     "num_serialized_models_to_keep": 1,
     "grad_clipping": 5.0,
-    "cuda_device": 0,
     "learning_rate_scheduler": {
       "type": "reduce_on_plateau",
       "mode": "min",
