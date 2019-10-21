@@ -15,7 +15,7 @@
   "model": {
     "type": "subtask1_classifier_wrapper",
     "model": {
-      "type": "subtask1_basic_classifier",
+      "type": "basic_classifier",
       "text_field_embedder": {
         "token_embedders": {
           "tokens": {

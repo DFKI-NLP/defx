@@ -15,7 +15,7 @@
   "model": {
     "type": "subtask1_classifier_wrapper",
     "model": {
-      "type": "subtask1_basic_classifier",
+      "type": "basic_classifier",
       "text_field_embedder": {
         "token_embedders": {
           "tokens": {
@@ -49,7 +49,7 @@
     "num_epochs": 100,
     "num_serialized_models_to_keep": 1,
     "grad_clipping": 5.0,
-    "cuda_device": 0,
+    "cuda_device": -1,
     "learning_rate_scheduler": {
       "type": "reduce_on_plateau",
       "mode": "min",
