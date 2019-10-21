@@ -24,7 +24,6 @@ class Subtask1ClassifierWrapper(Model):
     positive_label: ``str``, optional(default = "HasDef")
         The positive class label to use for F1 metric evaluation.
     """
-    
     def __init__(self,
                  vocab: Vocabulary,
                  model: Model,
@@ -39,6 +38,7 @@ class Subtask1ClassifierWrapper(Model):
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
                 label: torch.IntTensor = None) -> Dict[str, torch.Tensor]:
+        # pylint: disable=arguments-differ,no-member
         output_dict = self._model(tokens, label)
         if label is not None:
             self._f1_measure(output_dict['logits'], label)
@@ -52,3 +52,8 @@ class Subtask1ClassifierWrapper(Model):
             'recall': recall,
             'f1-measure': fscore
         }
+
+    @overrides
+    def decode(self,
+               output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        return self._model.decode(output_dict)

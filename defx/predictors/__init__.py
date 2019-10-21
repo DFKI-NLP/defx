@@ -1,0 +1,1 @@
+from defx.predictors.subtask1_predictor import Subtask1Predictor
