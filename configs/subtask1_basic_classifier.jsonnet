@@ -1,5 +1,6 @@
 {
   local token_emb_dim = 300,
+  local cnn_kernels = [2, 3, 4],
 
   "dataset_reader": {
     "type": "subtask1_reader",
@@ -7,6 +8,7 @@
       "tokens": {
         "type": "single_id",
         "lowercase_tokens": true,
+        "token_min_padding_length": cnn_kernels[std.length(cnn_kernels)-1],
       },
     },
   },
@@ -30,7 +32,7 @@
         "type": "cnn",
         "embedding_dim": token_emb_dim,
         "num_filters": 500,
-        "ngram_filter_sizes": [2, 3, 4],
+        "ngram_filter_sizes": cnn_kernels,
       },
       "dropout": 0.5
     },

@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Any, Dict, List, Optional
 
 from overrides import overrides
 import torch
@@ -37,7 +37,9 @@ class Subtask1ClassifierWrapper(Model):
     @overrides
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
-                label: torch.IntTensor = None) -> Dict[str, torch.Tensor]:
+                label: torch.IntTensor = None,
+                origin: Optional[List[Dict[str, Any]]] = None
+                ) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ,no-member
         output_dict = self._model(tokens, label)
         if label is not None:

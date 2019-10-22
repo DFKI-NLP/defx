@@ -6,7 +6,7 @@ import logging
 from overrides import overrides
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import TextField, LabelField
+from allennlp.data.fields import TextField, LabelField, MetadataField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers.token import Token
@@ -53,17 +53,21 @@ class DeftSubtask1Reader(DatasetReader):
     def _read_file(self, file_path):
         with open(cached_path(file_path), 'r') as data_file:
             logger.info("Reading instances from %s", file_path)
-            for line in data_file:
+            for idx, line in enumerate(data_file):
                 line = line.strip('\n')
                 text, label = line.split('\t')
                 text = text[1:-1].strip()
                 label = 'HasDef' if label == '"1"' else 'NoDef'
-                yield self.text_to_instance(text, label)
+                origin = f'{Path(file_path).name}##{idx}'
+                yield self.text_to_instance(text=text,
+                                            label=label,
+                                            origin=origin)
 
     @overrides
     def text_to_instance(self,
                          text: str,
-                         label: str = None) -> Instance:
+                         label: str = None,
+                         origin: str = None) -> Instance:
         # pylint: disable=arguments-differ
         tokens = [Token(t) for t in text.split(' ')]
         fields = {
@@ -71,4 +75,6 @@ class DeftSubtask1Reader(DatasetReader):
         }
         if label is not None:
             fields['label'] = LabelField(label)
+        if origin is not None:
+            fields['origin'] = MetadataField(origin)
         return Instance(fields)
