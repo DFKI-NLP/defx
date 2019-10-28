@@ -4,3 +4,4 @@
 from defx.dataset_readers import *
 from defx.models import *
 from defx.predictors import *
+from defx.util import *

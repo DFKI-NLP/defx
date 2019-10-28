@@ -1,0 +1,33 @@
+5	data/source_txt/train/t1_biology_0_0.txt	 250	 251	 O	 -1	 -1	 0
+.	data/source_txt/train/t1_biology_0_0.txt	 251	 252	 O	 -1	 -1	 0
+
+Science	data/source_txt/train/t1_biology_0_0.txt	 253	 260	 O	 -1	 -1	 0
+includes	data/source_txt/train/t1_biology_0_0.txt	 261	 269	 O	 -1	 -1	 0
+such	data/source_txt/train/t1_biology_0_0.txt	 270	 274	 O	 -1	 -1	 0
+diverse	data/source_txt/train/t1_biology_0_0.txt	 275	 282	 O	 -1	 -1	 0
+fields	data/source_txt/train/t1_biology_0_0.txt	 283	 289	 O	 -1	 -1	 0
+as	data/source_txt/train/t1_biology_0_0.txt	 290	 292	 O	 -1	 -1	 0
+astronomy	data/source_txt/train/t1_biology_0_0.txt	 293	 302	 O	 -1	 -1	 0
+,	data/source_txt/train/t1_biology_0_0.txt	 302	 303	 O	 -1	 -1	 0
+biology	data/source_txt/train/t1_biology_0_0.txt	 304	 311	 O	 -1	 -1	 0
+,	data/source_txt/train/t1_biology_0_0.txt	 311	 312	 O	 -1	 -1	 0
+computer	data/source_txt/train/t1_biology_0_0.txt	 313	 321	 O	 -1	 -1	 0
+sciences	data/source_txt/train/t1_biology_0_0.txt	 322	 330	 O	 -1	 -1	 0
+,	data/source_txt/train/t1_biology_0_0.txt	 330	 331	 O	 -1	 -1	 0
+geology	data/source_txt/train/t1_biology_0_0.txt	 332	 339	 O	 -1	 -1	 0
+,	data/source_txt/train/t1_biology_0_0.txt	 339	 340	 O	 -1	 -1	 0
+logic	data/source_txt/train/t1_biology_0_0.txt	 341	 346	 O	 -1	 -1	 0
+,	data/source_txt/train/t1_biology_0_0.txt	 346	 347	 O	 -1	 -1	 0
+physics	data/source_txt/train/t1_biology_0_0.txt	 348	 355	 O	 -1	 -1	 0
+,	data/source_txt/train/t1_biology_0_0.txt	 355	 356	 O	 -1	 -1	 0
+chemistry	data/source_txt/train/t1_biology_0_0.txt	 357	 366	 O	 -1	 -1	 0
+,	data/source_txt/train/t1_biology_0_0.txt	 366	 367	 O	 -1	 -1	 0
+and	data/source_txt/train/t1_biology_0_0.txt	 368	 371	 O	 -1	 -1	 0
+mathematics	data/source_txt/train/t1_biology_0_0.txt	 372	 383	 O	 -1	 -1	 0
+(	data/source_txt/train/t1_biology_0_0.txt	 384	 385	 O	 -1	 -1	 0
+[	data/source_txt/train/t1_biology_0_0.txt	 385	 386	 O	 -1	 -1	 0
+link	data/source_txt/train/t1_biology_0_0.txt	 386	 390	 O	 -1	 -1	 0
+]	data/source_txt/train/t1_biology_0_0.txt	 390	 391	 O	 -1	 -1	 0
+)	data/source_txt/train/t1_biology_0_0.txt	 391	 392	 O	 -1	 -1	 0
+.	data/source_txt/train/t1_biology_0_0.txt	 392	 393	 O	 -1	 -1	 0
+

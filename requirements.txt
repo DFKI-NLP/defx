@@ -1,6 +1,8 @@
+overrides
 allennlp==0.9.0
 torch==1.2.0
 
 pandas
 numpy
 scikit-learn
+tqdm

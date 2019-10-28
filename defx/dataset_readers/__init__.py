@@ -1,1 +1,2 @@
 from defx.dataset_readers.deft_subtask1_reader import DeftSubtask1Reader
+from defx.dataset_readers.deft_jsonl_reader import DeftJsonlReader
