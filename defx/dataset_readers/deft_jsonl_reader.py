@@ -9,8 +9,6 @@ from allennlp.data.fields import SequenceLabelField, MetadataField, TextField, L
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from overrides import overrides
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-
 
 @DatasetReader.register('jsonl_reader')
 class DeftJsonlReader(DatasetReader):
@@ -25,6 +23,7 @@ class DeftJsonlReader(DatasetReader):
     def __init__(self,
                  subtasks: List[int],
                  lazy: bool = False,
+                 sample_limit: int = None,
                  token_indexers: Dict[str, TokenIndexer] = None):
         super().__init__(lazy)
         default_indexer = {'tokens': SingleIdTokenIndexer()}
@@ -32,12 +31,14 @@ class DeftJsonlReader(DatasetReader):
         for subtask in subtasks:
             assert subtask in DeftJsonlReader.VALID_SUBTASKS, "invalid subtask"
         self._subtasks = subtasks
+        self._sample_limit = sample_limit
 
     @overrides
     def _read(self, file_path) -> Iterable[Instance]:
         with open(cached_path(file_path), 'r') as data_file:
-            logger.info("Reading instances from %s", file_path)
-            for line in data_file:
+            for idx, line in enumerate(data_file):
+                if self._sample_limit and idx >= self._sample_limit:
+                    break
                 example_json = json.loads(line.strip())
                 sentences = example_json['sentences']
 
