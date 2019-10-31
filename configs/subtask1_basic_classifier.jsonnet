@@ -1,7 +1,11 @@
-{
-  local token_emb_dim = 300,
-  local cnn_kernels = [2, 3, 4],
+local token_emb_dim = 300;
+local cnn_kernels = [2, 3, 4];
+local SEED = std.parseInt(std.extVar("ALLENNLP_SEED"));
 
+{
+  "numpy_seed": SEED,
+  "pytorch_seed": SEED,
+  "random_seed": SEED,
   "dataset_reader": {
     "type": "subtask1_reader",
     "token_indexers": {
@@ -51,7 +55,7 @@
     "num_epochs": 100,
     "num_serialized_models_to_keep": 1,
     "grad_clipping": 5.0,
-    "cuda_device": -1,
+    "cuda_device": std.parseInt(std.extVar("ALLENNLP_DEVICE")),
     "learning_rate_scheduler": {
       "type": "reduce_on_plateau",
       "mode": "min",

@@ -1,7 +1,11 @@
-{
-  local token_emb_dim = 50,
-  local cnn_kernels = [2, 3, 4],
+local token_emb_dim = 50;
+local cnn_kernels = [2, 3, 4];
+local SEED = std.parseInt(std.extVar("ALLENNLP_SEED"));
 
+{
+  "numpy_seed": SEED,
+  "pytorch_seed": SEED,
+  "random_seed": SEED,
   "dataset_reader": {
     "type": "subtask1_reader",
     "token_indexers": {
