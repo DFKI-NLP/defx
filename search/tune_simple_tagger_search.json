@@ -1,0 +1,11 @@
+{
+  "DROPOUT": {
+    "sampling strategy": "uniform",
+    "bounds": [0, 0.3]
+  },
+  "L2_NORM_EXP": {
+    "sampling strategy": "integer",
+    "bounds": [-8, -3]
+  },
+  "ALLENNLP_SEED": 0
+}

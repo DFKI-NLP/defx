@@ -1,0 +1,19 @@
+{
+  "LEARNING_RATE": {
+    "sampling strategy": "loguniform",
+    "bounds": [1e-3, 1e+0]
+  },
+  "LSTM_HIDDEN_SIZE": {
+    "sampling strategy": "integer",
+    "bounds": [50, 200]
+  },
+  "LSTM_NUM_LAYERS": {
+    "sampling strategy": "choice",
+    "choices": [1, 2]
+  },
+  "BATCH_SIZE": {
+    "sampling strategy": "choice",
+    "choices": [10, 20, 25, 50]
+  },
+  "CUDA_DEVICE": -1
+}
