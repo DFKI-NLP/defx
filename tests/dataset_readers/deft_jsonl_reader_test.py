@@ -2,6 +2,7 @@ import itertools
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.util import ensure_list
+from allennlp.data import Token
 
 from defx import DeftJsonlReader
 
@@ -44,7 +45,7 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
         reader = DeftJsonlReader(subtasks=[1, 2])
         example_id = 'some_example_id'
         sentence_labels = ['HasDef', 'NoDef', 'NoDef']
-        tokens = [
+        tokenized_text = [
             ['Immunotherapy', 'is', 'the', 'treatment', 'of', 'disease',
              'by', 'activating', 'or', 'suppressing', 'the', 'immune',
              'system', '.'],
@@ -52,6 +53,7 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
              'researchers', '.'],
             ['Cell-based', 'immunotherapies', 'are', 'effective', 'for',
              'some', 'cancers', '.']]
+        tokens = [[Token(t) for t in s] for s in tokenized_text]
         tags = [
             ['B-Term', 'O', 'B-Definition', 'I-Definition', 'I-Definition',
              'I-Definition', 'I-Definition', 'I-Definition', 'I-Definition',
@@ -68,7 +70,7 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
 
         assert len(instance.fields) == 4
 
-        expected_tokens = list(itertools.chain.from_iterable(tokens))
+        expected_tokens = list(itertools.chain.from_iterable(tokenized_text))
 
         metadata_field = instance.fields.get('metadata')
         assert metadata_field['words'] == expected_tokens
@@ -94,7 +96,7 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
     def test_text_to_test_instance():
         """Tests the creation of a single test instance without labels"""
         reader = DeftJsonlReader(subtasks=[1, 2])
-        tokens = [
+        tokenized_text = [
             ['Immunotherapy', 'is', 'the', 'treatment', 'of', 'disease',
              'by', 'activating', 'or', 'suppressing', 'the', 'immune',
              'system', '.'],
@@ -102,14 +104,14 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
              'researchers', '.'],
             ['Cell-based', 'immunotherapies', 'are', 'effective', 'for',
              'some', 'cancers', '.']]
-
+        tokens = [[Token(t) for t in s] for s in tokenized_text]
         instance = reader.text_to_instance(tokens)
 
         assert len(instance.fields) == 2
 
-        expected_tokens = itertools.chain.from_iterable(tokens)
+        expected_tokens = list(itertools.chain.from_iterable(tokenized_text))
         tokens = [t.text for t in instance.fields.get('tokens')]
-        assert tokens == list(expected_tokens)
+        assert tokens == expected_tokens
 
     @staticmethod
     def test_text_to_subtask1_instance():
@@ -117,7 +119,7 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
         reader = DeftJsonlReader(subtasks=[1])
         example_id = 'some_example_id'
         sentence_labels = ['HasDef', 'NoDef', 'NoDef']
-        tokens = [
+        tokenized_text = [
             ['Immunotherapy', 'is', 'the', 'treatment', 'of', 'disease',
              'by', 'activating', 'or', 'suppressing', 'the', 'immune',
              'system', '.'],
@@ -125,6 +127,7 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
              'researchers', '.'],
             ['Cell-based', 'immunotherapies', 'are', 'effective', 'for',
              'some', 'cancers', '.']]
+        tokens = [[Token(t) for t in s] for s in tokenized_text]
         tags = [
             ['B-Term', 'O', 'B-Definition', 'I-Definition', 'I-Definition',
              'I-Definition', 'I-Definition', 'I-Definition', 'I-Definition',
@@ -141,9 +144,9 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
 
         assert len(instance.fields) == 3
 
-        expected_tokens = itertools.chain.from_iterable(tokens)
+        expected_tokens = list(itertools.chain.from_iterable(tokenized_text))
         tokens = [t.text for t in instance.fields.get('tokens')]
-        assert tokens == list(expected_tokens)
+        assert tokens == expected_tokens
 
         def get_sentence_label(idx):
             return instance.fields.get('sentence_labels')[idx].label
@@ -159,7 +162,7 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
         reader = DeftJsonlReader(subtasks=[2])
         example_id = 'some_example_id'
         sentence_labels = ['HasDef', 'NoDef', 'NoDef']
-        tokens = [
+        tokenized_text = [
             ['Immunotherapy', 'is', 'the', 'treatment', 'of', 'disease',
              'by', 'activating', 'or', 'suppressing', 'the', 'immune',
              'system', '.'],
@@ -167,6 +170,7 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
              'researchers', '.'],
             ['Cell-based', 'immunotherapies', 'are', 'effective', 'for',
              'some', 'cancers', '.']]
+        tokens = [[Token(t) for t in s] for s in tokenized_text]
         tags = [
             ['B-Term', 'O', 'B-Definition', 'I-Definition', 'I-Definition',
              'I-Definition', 'I-Definition', 'I-Definition', 'I-Definition',
@@ -187,9 +191,9 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
         # the labels namespace for the sequence tags
         assert instance.fields.get('tags')._label_namespace == 'labels'
 
-        expected_tokens = itertools.chain.from_iterable(tokens)
+        expected_tokens = list(itertools.chain.from_iterable(tokenized_text))
         tokens = [t.text for t in instance.fields.get('tokens')]
-        assert tokens == list(expected_tokens)
+        assert tokens == expected_tokens
 
         assert 'sentence_labels' not in instance.fields
 

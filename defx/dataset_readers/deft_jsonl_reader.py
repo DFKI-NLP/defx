@@ -1,6 +1,5 @@
 import itertools
 import json
-import logging
 from typing import Dict, List, Iterable
 
 from allennlp.common.file_utils import cached_path
@@ -49,7 +48,7 @@ class DeftJsonlReader(DatasetReader):
                 example_json = json.loads(line.strip())
                 sentences = example_json['sentences']
 
-                tokens = [s['tokens'] for s in sentences]
+                tokens = [[Token(t) for t in s['tokens']] for s in sentences]
                 if 'sentence_label' in sentences[0]:
                     sentence_labels = [s['sentence_label'] for s in sentences]
                 else:
@@ -58,14 +57,14 @@ class DeftJsonlReader(DatasetReader):
                     tags = [s['tags'] for s in sentences]
                 else:
                     tags = None
-                yield self.text_to_instance(example_id=example_json['id'],
-                                            tokens=tokens,
+                yield self.text_to_instance(tokens=tokens,
                                             sentence_labels=sentence_labels,
-                                            tags=tags)
+                                            tags=tags,
+                                            example_id=example_json['id'])
 
     @overrides
     def text_to_instance(self,
-                         tokens: List[List[str]],
+                         tokens: List[List[Token]],
                          sentence_labels: List[str] = None,
                          tags: List[List[str]] = None,
                          example_id: str = None) -> Instance:
@@ -73,10 +72,10 @@ class DeftJsonlReader(DatasetReader):
         assert len(tokens) > 0, 'Empty example encountered'
 
         concatenated_tokens = list(itertools.chain.from_iterable(tokens))
-        text_field = TextField([Token(t) for t in concatenated_tokens],
+        text_field = TextField(concatenated_tokens,
                                token_indexers=self._token_indexers)
 
-        metadata = {"words": concatenated_tokens}
+        metadata = {"words": [t.text for t in concatenated_tokens]}
         if example_id:
             metadata["example_id"] = example_id
         fields = {'metadata': MetadataField(metadata), 'tokens': text_field}
