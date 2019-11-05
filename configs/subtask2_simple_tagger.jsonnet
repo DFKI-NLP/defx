@@ -71,7 +71,7 @@ local SEED = std.parseInt(std.extVar("ALLENNLP_SEED"));
       "type": "adam",
       "lr": "0.0016610248112331916"
     },
-    "patience": 50,
+    "patience": 15,
     "validation_metric": "-loss",
     "num_epochs": 100,
     "num_serialized_models_to_keep": 1,
