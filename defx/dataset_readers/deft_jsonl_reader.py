@@ -58,21 +58,21 @@ class DeftJsonlReader(DatasetReader):
 
     @overrides
     def text_to_instance(self,
-                         example_id: str,
                          tokens: List[List[str]],
                          sentence_labels: List[str] = None,
-                         tags: List[List[str]] = None) -> Instance:
+                         tags: List[List[str]] = None,
+                         example_id: str = None) -> Instance:
         # pylint: disable=arguments-differ
         assert len(tokens) > 0, 'Empty example encountered'
 
         concatenated_tokens = list(itertools.chain.from_iterable(tokens))
         text_field = TextField([Token(t) for t in concatenated_tokens],
                                token_indexers=self._token_indexers)
-        metadata = MetadataField({
-            "words": concatenated_tokens,
-            "example_id": example_id
-        })
-        fields = {'metadata': metadata, 'tokens': text_field}
+
+        metadata = {"words": concatenated_tokens}
+        if example_id:
+            metadata["example_id"] = example_id
+        fields = {'metadata': MetadataField(metadata), 'tokens': text_field}
 
         if sentence_labels and 1 in self._subtasks:
             fields['sentence_labels'] = ListField(

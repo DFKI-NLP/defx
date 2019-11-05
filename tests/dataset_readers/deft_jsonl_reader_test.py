@@ -61,8 +61,8 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
             ['B-Term', 'I-Term', 'O', 'O', 'O', 'O', 'O', 'O']]
 
         instance = reader.text_to_instance(
-            example_id=example_id,
             tokens=tokens,
+            example_id=example_id,
             sentence_labels=sentence_labels,
             tags=tags)
 
@@ -90,7 +90,6 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
     def test_text_to_test_instance():
         """Tests the creation of a single test instance without labels"""
         reader = DeftJsonlReader(subtasks=[1, 2])
-        example_id = 'some_example_id'
         tokens = [
             ['Immunotherapy', 'is', 'the', 'treatment', 'of', 'disease',
              'by', 'activating', 'or', 'suppressing', 'the', 'immune',
@@ -100,9 +99,7 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
             ['Cell-based', 'immunotherapies', 'are', 'effective', 'for',
              'some', 'cancers', '.']]
 
-        instance = reader.text_to_instance(
-            example_id=example_id,
-            tokens=tokens)
+        instance = reader.text_to_instance(tokens)
 
         assert len(instance.fields) == 2
 
@@ -133,8 +130,8 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
             ['B-Term', 'I-Term', 'O', 'O', 'O', 'O', 'O', 'O']]
 
         instance = reader.text_to_instance(
-            example_id=example_id,
             tokens=tokens,
+            example_id=example_id,
             sentence_labels=sentence_labels,
             tags=tags)
 
@@ -175,8 +172,8 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
             ['B-Term', 'I-Term', 'O', 'O', 'O', 'O', 'O', 'O']]
 
         instance = reader.text_to_instance(
-            example_id=example_id,
             tokens=tokens,
+            example_id=example_id,
             sentence_labels=sentence_labels,
             tags=tags)
 
