@@ -86,6 +86,10 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
         expected_tags = itertools.chain.from_iterable(tags)
         assert instance.fields.get('tags').labels == list(expected_tags)
 
+        # "Subtask 2 only" dataset readers should use the labels namespace
+        # for the sequence tags, but others should use 'tags'
+        assert instance.fields.get('tags')._label_namespace == 'tags'
+
     @staticmethod
     def test_text_to_test_instance():
         """Tests the creation of a single test instance without labels"""
@@ -178,6 +182,10 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
             tags=tags)
 
         assert len(instance.fields) == 3
+
+        # "Subtask 2 only" dataset readers should use
+        # the labels namespace for the sequence tags
+        assert instance.fields.get('tags')._label_namespace == 'labels'
 
         expected_tokens = itertools.chain.from_iterable(tokens)
         tokens = [t.text for t in instance.fields.get('tokens')]

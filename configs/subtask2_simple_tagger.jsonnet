@@ -55,7 +55,6 @@ local SEED = std.parseInt(std.extVar("ALLENNLP_SEED"));
       "bidirectional": true,
       "dropout": 0.23038165291940893,
     },
-    "label_namespace": "tags",
     "label_encoding": "BIO",
     "calculate_span_f1": true,
     "verbose_metrics": false,

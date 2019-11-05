@@ -33,6 +33,13 @@ class DeftJsonlReader(DatasetReader):
         self._subtasks = subtasks
         self._sample_limit = sample_limit
 
+        # "Subtask 2 only" dataset readers should use the labels namespace
+        # for the sequence tags, but others should use 'tags'
+        if self._subtasks == [2]:
+            self._tags_namespace = 'labels'
+        else:
+            self._tags_namespace = 'tags'
+
     @overrides
     def _read(self, file_path) -> Iterable[Instance]:
         with open(cached_path(file_path), 'r') as data_file:
@@ -82,7 +89,7 @@ class DeftJsonlReader(DatasetReader):
             tags_field = SequenceLabelField(
                 [tag for tag in itertools.chain.from_iterable(tags)],
                 sequence_field=text_field,
-                label_namespace='tags')
+                label_namespace=self._tags_namespace)
             fields['tags'] = tags_field
 
         return Instance(fields)

@@ -33,7 +33,6 @@
       "bidirectional": true,
       "dropout": dropout,
     },
-    "label_namespace": "tags",
     "label_encoding": "BIO",
     "calculate_span_f1": true,
     "dropout": dropout,
