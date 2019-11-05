@@ -48,13 +48,13 @@ class DeftJsonlReader(DatasetReader):
                 example_json = json.loads(line.strip())
                 sentences = example_json['sentences']
 
-                tokens = [[Token(t) for t in s['tokens']] for s in sentences]
+                tokens = [Token(t) for s in sentences for t in s['tokens']]
                 if 'sentence_label' in sentences[0]:
                     sentence_labels = [s['sentence_label'] for s in sentences]
                 else:
                     sentence_labels = None
                 if 'tags' in sentences[0]:
-                    tags = [s['tags'] for s in sentences]
+                    tags = [t for s in sentences for t in s['tags']]
                 else:
                     tags = None
                 yield self.text_to_instance(tokens=tokens,
@@ -64,18 +64,16 @@ class DeftJsonlReader(DatasetReader):
 
     @overrides
     def text_to_instance(self,
-                         tokens: List[List[Token]],
+                         tokens: List[Token],
                          sentence_labels: List[str] = None,
-                         tags: List[List[str]] = None,
+                         tags: List[str] = None,
                          example_id: str = None) -> Instance:
         # pylint: disable=arguments-differ
         assert len(tokens) > 0, 'Empty example encountered'
 
-        concatenated_tokens = list(itertools.chain.from_iterable(tokens))
-        text_field = TextField(concatenated_tokens,
-                               token_indexers=self._token_indexers)
+        text_field = TextField(tokens, token_indexers=self._token_indexers)
 
-        metadata = {"words": [t.text for t in concatenated_tokens]}
+        metadata = {"words": [t.text for t in tokens]}
         if example_id:
             metadata["example_id"] = example_id
         fields = {'metadata': MetadataField(metadata), 'tokens': text_field}
@@ -86,7 +84,7 @@ class DeftJsonlReader(DatasetReader):
 
         if tags and 2 in self._subtasks:
             tags_field = SequenceLabelField(
-                [tag for tag in itertools.chain.from_iterable(tags)],
+                labels=tags,
                 sequence_field=text_field,
                 label_namespace=self._tags_namespace)
             fields['tags'] = tags_field
