@@ -1,0 +1,7 @@
+{
+  "DROPOUT": {
+    "sampling strategy": "uniform",
+    "bounds": [0, 0.6]
+  },
+  "ALLENNLP_SEED": 0
+}
