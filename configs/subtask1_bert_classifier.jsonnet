@@ -14,8 +14,8 @@ local SEED = std.parseInt(std.extVar("ALLENNLP_SEED"));
       }
     }
   },
-  "train_data_path": "data/subtask1/split/train.tsv",
-  "validation_data_path": "data/subtask1/split/dev.tsv",
+  "train_data_path": "data/deft_split/subtask1_raw/train/",
+  "validation_data_path": "data/deft_split/subtask1_raw/dev/",
   "model": {
     "type": "subtask1_classifier_wrapper",
     "model": {

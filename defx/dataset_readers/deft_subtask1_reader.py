@@ -11,8 +11,6 @@ from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers.token import Token
 
-logger = logging.getLogger(__name__) # pylint: disable=invalid-name
-
 
 @DatasetReader.register('subtask1_reader')
 class DeftSubtask1Reader(DatasetReader):
@@ -52,7 +50,6 @@ class DeftSubtask1Reader(DatasetReader):
 
     def _read_file(self, file_path):
         with open(cached_path(file_path), 'r') as data_file:
-            logger.info("Reading instances from %s", file_path)
             for idx, line in enumerate(data_file):
                 line = line.strip('\n')
                 text, label = line.split('\t')

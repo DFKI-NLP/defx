@@ -25,22 +25,40 @@ def batched_predict_instances(predictor: Predictor,
     return results
 
 
-def write_predictions(output_file, predictions, string_label=True):
+def write_subtask1_output_file(output_file, predictions):
     with output_file.open('w') as f:
         writer = csv.writer(f, delimiter='\t', quotechar='"',
                             quoting=csv.QUOTE_ALL)
         for prediction in predictions:
             input_file, input_row, text, instance, result = prediction
             expected_origin = f'{input_file}##{input_row}'
-            if string_label:
-                label = result.get('label')
-            else:
-                label = 1 if result.get('label') == 'HasDef' else 0
-            if not args.single_file:
-                assert instance.get('origin').metadata == expected_origin
+            label = 1 if result.get('label') == 'HasDef' else 0
+            assert instance.get('origin').metadata == expected_origin
             writer.writerow([text, label])
 
-def read_input_file(input_file):
+
+def write_task1_predictions(input_files, output_dir, predicted_instances):
+    sentences = []
+    source_files = []
+    source_rows = []
+    for input_file in input_files:
+        sents, files, rows = read_task1_input_file(input_file)
+        sentences.extend(sents)
+        source_files.extend(files)
+        source_rows.extend(rows)
+
+    assert len(sentences) == len(predicted_instances)
+    instances, results = zip(*predicted_instances)
+    predictions = zip(source_files, source_rows, sentences, instances, results)
+    predictions_by_origin = itertools.groupby(predictions,
+                                              lambda x: x[0])
+    for input_file, prediction_group in predictions_by_origin:
+        output_file_name = f'task_1_{input_file}'
+        output_file = Path(output_dir, output_file_name)
+        write_subtask1_output_file(output_file, prediction_group)
+
+
+def read_task1_input_file(input_file):
     sentences = []
     source_files = []
     source_rows = []
@@ -52,63 +70,75 @@ def read_input_file(input_file):
     return sentences, source_files, source_rows
 
 
+def write_task2_predictions(output_dir, predicted_instances):
+    get_file_name = lambda p: get_instance_source_file(p[0])
+    predictions_by_file = itertools.groupby(predicted_instances,
+                                            key=get_file_name)
+    for input_file, prediction_group in predictions_by_file:
+        output_file_name = f'task_2_{input_file}'
+        output_file = Path(output_dir, output_file_name)
+        write_subtask2_output_file(output_file, list(prediction_group))
+
+
+def write_subtask2_output_file(output_file, predictions):
+    with output_file.open('w') as f:
+        writer = csv.writer(f, delimiter='\t', quotechar='"',
+                            quoting=csv.QUOTE_ALL)
+        for prediction in predictions:
+            instance, results = prediction
+            source_file = get_instance_source_file(instance)
+            for word, tag in zip(results['words'], results['tags']):
+                writer.writerow([word, source_file, 666, 666, tag])
+            writer.writerow([])
+
+
+def get_instance_source_file(instance):
+    return instance.get('metadata')['example_id'].split('##')[0]
+
+
 parser = argparse.ArgumentParser('Bundle predictions for a submission')
 parser.add_argument('input_data',
                     help='Folder with .deft files containing input sentences')
 parser.add_argument('prediction_output',
                     help='Output folder with files containing predicted labels')
 parser.add_argument('--model-archive', help='The model.tar.gz file')
-parser.add_argument('--single-file', action='store_true',
-                    help='Skip the archive creation and generate a single file')
+parser.add_argument('--predictor', default='subtask1_predictor')
+parser.add_argument('--submission-file', default='submission.zip')
+parser.add_argument('--subtasks', nargs="+", type=int, default=[1],
+                    help='Choose which subtasks to bundle')
+parser.add_argument('-f', dest='force_output', action='store_true',
+                    help='force creation of a new output dir')
 args = parser.parse_args()
 
+for subtask in args.subtasks:
+    assert subtask in [1, 2], 'Subtask not supported: {}'.format(subtask)
+input_data = Path(args.input_data)
+output_dir = Path(args.prediction_output)
+assert input_data.exists()
+if output_dir.exists():
+    assert args.force_output, 'Output directory already exists'
+else:
+    output_dir.mkdir(exist_ok=True)
+
 print('Reading instances...')
-predictor = Predictor.from_path(args.model_archive, 'subtask1_predictor')
+predictor = Predictor.from_path(args.model_archive, args.predictor)
 instances = predictor._dataset_reader.read(args.input_data)
 
 print('Running prediction...')
 results = batched_predict_instances(predictor, instances, batch_size=32)
-
-print('Reading source texts...')
-input_data = Path(args.input_data)
-if input_data.is_dir():
-    sentences = []
-    source_files = []
-    source_rows = []
-    for input_file in Path(args.input_data).iterdir():
-        sents, files, rows = read_input_file(input_file)
-        sentences.extend(sents)
-        source_files.extend(files)
-        source_rows.extend(rows)
-else:
-    sentences, source_files, source_rows = read_input_file(Path(input_data))
-
-
-assert len(sentences) == len(results)
-predictions = zip(source_files, source_rows, sentences, instances, results)
+predicted_instances = list(zip(instances, results))
 
 print('Writing predictions...')
-if args.single_file:
-    output_file = Path(args.prediction_output)
-    assert not output_file.exists() or output_file.is_file()
-    write_predictions(output_file, predictions, string_label=False)
-else:
-    output_dir = Path(args.prediction_output)
-    assert not output_dir.exists() or output_dir.is_dir()
-    output_dir.mkdir(exist_ok=True)
-    predictions_by_origin = itertools.groupby(predictions,
-                                              lambda x: x[0])
-    for input_file, prediction_group in predictions_by_origin:
-        output_file_name = 'task_1_' + input_file
-        output_file = Path(output_dir, output_file_name)
-        write_predictions(output_file, prediction_group)
+if 1 in args.subtasks:
+    input_files = input_data.glob('*.deft')
+    write_task1_predictions(input_files, output_dir, predicted_instances)
+if 2 in args.subtasks:
+    write_task2_predictions(output_dir, predicted_instances)
 
-if not args.single_file:
-    print('Creating archive...')
-    with ZipFile(Path(output_dir, "task_1_submission.zip"), 'w') as zf:
-        for pred_file in Path(output_dir).iterdir():
-            if pred_file.suffix == '.deft':
-                zf.write(pred_file, pred_file.name)
-                pred_file.unlink()
+print('Creating archive...')
+with ZipFile(Path(output_dir, args.submission_file), 'w') as zf:
+    for pred_file in Path(output_dir).iterdir():
+        if pred_file.suffix == '.deft':
+            zf.write(pred_file, pred_file.name)
 
 print('Done.')
