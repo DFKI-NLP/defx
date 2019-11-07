@@ -1,6 +1,5 @@
 from unittest import TestCase
 
-from pytest import approx
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
 

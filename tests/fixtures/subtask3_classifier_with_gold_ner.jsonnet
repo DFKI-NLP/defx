@@ -1,10 +1,11 @@
 {
   local token_emb_dim = 2,
-  local dropout = 0.5,
+  local ner_emb_dim = 4,
+  local encoder_hidden_dim = 3,
 
   "dataset_reader": {
     "type": "jsonl_reader",
-    "subtasks": [2],
+    "subtasks": [3],
     "token_indexers": {
       "tokens": {
         "type": "single_id",
@@ -15,7 +16,7 @@
   "train_data_path": "tests/fixtures/jsonl_format_samples.jsonl",
   "validation_data_path": "tests/fixtures/jsonl_format_samples.jsonl",
   "model": {
-    "type": "crf_tagger",
+    "type": "subtask3_classifier_with_gold_ner",
     "text_field_embedder": {
       "token_embedders": {
         "tokens": {
@@ -25,17 +26,24 @@
         },
       },
     },
+    "ner_tag_embedder": {
+      "type": "embedding",
+      "embedding_dim": ner_emb_dim,
+      "trainable": true
+    },
     "encoder": {
       "type": "lstm",
       "input_size": token_emb_dim,
-      "hidden_size": 2,
+      "hidden_size": encoder_hidden_dim,
       "num_layers": 1,
       "bidirectional": true,
-      "dropout": dropout,
     },
-    "label_encoding": "BIO",
-    "calculate_span_f1": true,
-    "dropout": dropout,
+    "relation_scorer": {
+      "input_size": 2 * encoder_hidden_dim + ner_emb_dim,
+      "hidden_size": 5,
+      "label_namespace": "relation_labels",
+      "negative_label": "0",
+    }
   },
   "iterator": {
     "type": "basic",

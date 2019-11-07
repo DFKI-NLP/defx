@@ -7,6 +7,15 @@ from typing import Any, Dict, List, TextIO
 from tqdm import tqdm
 
 SENTS_PER_EXAMPLE = 3
+SEQUENCE_FIELDS = [
+    'tokens',
+    'start_chars',
+    'end_chars',
+    'tags',
+    'ner_ids',
+    'relation_roots',
+    'relations'
+]
 
 
 def main():
@@ -41,32 +50,62 @@ def _convert_deft_folder(input_path: Path, output_file: TextIO) -> None:
 def _convert_deft_file(input_file: Path) -> List[Dict[str, Any]]:
     """Converts a deft file into jsonl format and writes to the output file"""
     examples = []
-    sentence_count = 0
+    example_count = 0
     with input_file.open() as file_handler:
         while True:
             next_line = _peek_line(file_handler)
             if '\n' not in next_line:
                 break
 
-            sentences = _parse_sentence_triple(file_handler)
-            for sentence in sentences:
-                sentence['id'] = f'{input_file.name}##{sentence_count}'
-                sentence_count += 1
-
-            num_sentences = len(sentences)
-            sentence_count += num_sentences
-            assert 0 < num_sentences < 4, f'invalid sent len: {num_sentences}'
-
-            examples.append({
-                'id': f'{input_file.name}##{sentence_count}',
-                'sentences': sentences,
-                'entities': _extract_entities(sentences),
-                'relations': _extract_relations(sentences)
-            })
+            example = _parse_example(file_handler)
+            example['id'] = f'{input_file.name}##{example_count}'
+            examples.append(example)
+            example_count += 1
     return examples
 
 
-def _parse_sentence_triple(file_handler: TextIO) -> List[Dict[str, Any]]:
+def _parse_example(file_handler: TextIO) -> Dict:
+    """Parses an example and does some pre-processing"""
+    sentences = _parse_example_sentences(file_handler)
+    example = {'sentence_labels': []}
+
+    # Flatten list fields into a single list
+    for field in SEQUENCE_FIELDS:
+        example[field] = [i for s in sentences for i in s[field]]
+
+    # Concatenate sentence labels with token spans
+    token_count = 0
+    for sentence in sentences:
+        sentence_length = len(sentence['tokens'])
+        start_token_idx = token_count
+        end_token_idx = start_token_idx + sentence_length
+        token_count += sentence_length
+        example['sentence_labels'].append({
+            'label': sentence['sentence_label'],
+            'start_token_idx': start_token_idx,
+            'end_token_idx': end_token_idx
+        })
+
+    # Remove relation annotations without head nodes
+    existing_head_ids = example['ner_ids']
+    for token_idx in range(len(example['tokens'])):
+        head_id = example['relation_roots'][token_idx]
+        if head_id not in existing_head_ids:
+            example['relations'][token_idx] = '0'
+            example['relation_roots'][token_idx] = '-1'
+
+    return example
+
+
+def _peek_line(file_handler) -> str:
+    """Peeks into the file returns the next line"""
+    current_pos = file_handler.tell()
+    line = file_handler.readline()
+    file_handler.seek(current_pos)
+    return line
+
+
+def _parse_example_sentences(file_handler: TextIO) -> Dict:
     """Parses up to three sentences from the given file handler"""
     sentences = []
     for sentence_count in range(SENTS_PER_EXAMPLE):
@@ -83,15 +122,10 @@ def _parse_sentence_triple(file_handler: TextIO) -> List[Dict[str, Any]]:
     if next_line.strip() == '':
         file_handler.readline()
 
+    num_sentences = len(sentences)
+    assert 0 < num_sentences < 4, f'invalid sent len: {num_sentences}'
+
     return sentences
-
-
-def _peek_line(file_handler) -> str:
-    """Peeks into the file returns the next line"""
-    current_pos = file_handler.tell()
-    line = file_handler.readline()
-    file_handler.seek(current_pos)
-    return line
 
 
 def _parse_sentence(input_file: TextIO) -> Dict[str, Any]:
@@ -182,6 +216,15 @@ def _extract_entities(sentences: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return entities
 
 
+def _entity_id_exists(sentences: List[Dict[str, Any]],
+                      expected_entity_id: str) -> bool:
+    for s in sentences:
+        for entity_id in s['ner_ids']:
+            if entity_id == expected_entity_id:
+                return True
+    return False
+
+
 def _extract_relations(sentences: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Aggregates relation information into a separate dictionary."""
     relations = []
@@ -194,6 +237,13 @@ def _extract_relations(sentences: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     grouped_relations = itertools.groupby(relation_tokens, key=lambda x: x[0])
     for _, relation_group in grouped_relations:
         tail_id, head_id, relation_type = next(relation_group)
+        if not _entity_id_exists(sentences, head_id):
+            # There are several relation annotations, that are missing the
+            # head entity. Simply skip these.
+            #   see: https://github.com/adobe-research/deft_corpus/issues/20
+            # print(sentences[0]['id'], ':', tail_id, head_id, relation_type)
+            continue
+        assert _entity_id_exists(sentences, head_id), 'head entity not found'
         relations.append({
             'head_id': head_id,
             'tail_id': tail_id,

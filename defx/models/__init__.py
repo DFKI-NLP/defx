@@ -1,1 +1,3 @@
 from defx.models.subtask1_classifier_wrapper import Subtask1ClassifierWrapper
+from defx.models.subtask3_classifier_with_gold_ner import Subtask3ClassifierWithGoldNer
+from defx.models.relation_scorer import RelationScorer
