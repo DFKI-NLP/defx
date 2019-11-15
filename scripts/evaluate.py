@@ -13,6 +13,9 @@ from evaluation_sub1 import get_gold_and_pred_labels as task1_get_labels
 from evaluation_sub1 import evaluate as task1_evaluate
 from evaluation_sub2 import evaluate as task2_evaluate
 from evaluation_sub2 import validate_data, get_label
+from evaluation_sub3 import get_gold_and_pred_relations as task3_get_labels
+from evaluation_sub3 import evaluate as task3_evaluate
+from evaluation_sub3 import has_relation, get_relation, get_relation_from, get_relation_to
 
 
 def evaluate_subtask(subtask, eval_labels, gold_dir, pred_dir):
@@ -31,6 +34,8 @@ def evaluate_subtask(subtask, eval_labels, gold_dir, pred_dir):
                 file_y_gold, file_y_pred = task1_get_labels(gold_file, pred_file)
             elif subtask == 2:
                 file_y_gold, file_y_pred = task2_get_labels(gold_file, pred_file)
+            elif subtask == 3:
+                file_y_gold, file_y_pred = task3_get_labels(gold_file, pred_file)
             else:
                 raise RuntimeError('Unknown subtask')
             y_gold.extend(file_y_gold)
@@ -42,6 +47,8 @@ def evaluate_subtask(subtask, eval_labels, gold_dir, pred_dir):
             report = task1_evaluate(y_gold, y_pred, eval_labels)
         elif subtask == 2:
             report = task2_evaluate(y_gold, y_pred, eval_labels)
+        elif subtask == 3:
+            report = task3_evaluate(y_gold, y_pred, eval_labels)
         else:
             raise RuntimeError('Unknown subtask')
 
@@ -71,6 +78,50 @@ def task2_get_labels(gold_fname, pred_fname):
     return y_gold, y_pred
 
 
+def task3_get_labels(gold_fname, pred_fname):
+    """Get the relation pairs for evaluation
+    Inputs:
+        gold_fname: path to .deft file
+        pred_fname: path to .deft file
+    Returns:
+        y_gold_rel_pairs: list of (tag1, tag2, relation) tuples
+        y_pred_rel_pairs: list of (tag1, tag2, relation) tuples
+    """
+    y_gold_rel_pairs = set()  # [(elem1, elem2, rel)]
+    y_pred_rel_pairs = set()  # [(elem1, elem2, rel)]
+
+    with gold_fname.open() as gold_source:
+        gold_reader = csv.reader(gold_source, delimiter="\t", quoting=csv.QUOTE_NONE)
+        gold_rows = [[col.strip() for col in row] for row in gold_reader if row]
+
+    with pred_fname.open() as pred_source:
+        pred_reader = csv.reader(pred_source, delimiter="\t")
+        pred_rows = [row for row in pred_reader if row]
+
+    validate_data(gold_rows, pred_rows)
+
+    gold_relation_rows = [row for row in gold_rows if has_relation_and_head(row)]
+    pred_relation_rows = [row for row in pred_rows if has_relation(row)]
+
+    for row in gold_relation_rows:
+        relation = get_relation(row)
+        relation_from = get_relation_from(row)
+        relation_to = get_relation_to(row)
+        y_gold_rel_pairs.add((relation_from, relation_to, relation))
+
+    for row in pred_relation_rows:
+        relation = get_relation(row)
+        relation_from = get_relation_from(row)
+        relation_to = get_relation_to(row)
+        y_pred_rel_pairs.add((relation_from, relation_to, relation))
+    return y_gold_rel_pairs, y_pred_rel_pairs
+
+
+def has_relation_and_head(row):
+    """Does this token participate in a relation?"""
+    return row[-1] != "0" and row[-2] != "0"
+
+
 parser = argparse.ArgumentParser(description='Runs the official evaluation')
 parser.add_argument('gold_input', type=str,
                     help='Gold labeled documents')
@@ -83,7 +134,7 @@ parser.add_argument('--subtasks', nargs="+", type=int,
 args = parser.parse_args()
 
 for subtask in args.subtasks:
-    assert subtask in [1, 2], 'Subtask not supported: {}'.format(subtask)
+    assert subtask in [1, 2, 3], 'Subtask not supported: {}'.format(subtask)
 
 gold_dir = Path(args.gold_input)
 pred_dir = Path(args.pred_input)
@@ -113,3 +164,14 @@ if 2 in args.subtasks:
         print('Subtask2 report:')
         pprint(task2_report)
     print(f'Subtask 2 score: {task2_report["macro avg"]["f1-score"]*100:.2f} F1')
+
+if 3 in args.subtasks:
+    eval_labels = config['task_3']['eval_labels']
+    task3_report = evaluate_subtask(subtask=3,
+                                    eval_labels=eval_labels,
+                                    gold_dir=gold_dir,
+                                    pred_dir=pred_dir)
+    if args.verbose:
+        print('Subtask3 report:')
+        pprint(task3_report)
+    print(f'Subtask 3 score: {task3_report["macro"]["f"]*100:.2f} F1')
