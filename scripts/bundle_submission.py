@@ -92,6 +92,43 @@ def write_subtask2_output_file(output_file, predictions):
             writer.writerow([])
 
 
+def write_task3_predictions(output_dir, predicted_instances):
+    get_file_name = lambda p: get_instance_source_file(p[0])
+    predictions_by_file = itertools.groupby(predicted_instances,
+                                            key=get_file_name)
+    for input_file, prediction_group in predictions_by_file:
+        output_file_name = f'task_3_{input_file}'
+        output_file = Path(output_dir, output_file_name)
+        write_subtask3_output_file(output_file, list(prediction_group))
+
+
+def write_subtask3_output_file(output_file, predictions):
+    with output_file.open('w') as f:
+        writer = csv.writer(f, delimiter='\t', quotechar='"',
+                            quoting=csv.QUOTE_ALL)
+        for prediction in predictions:
+            instance, results = prediction
+            source_file = get_instance_source_file(instance)
+            words = results['words']
+            if 'ner_ids' in results:
+                ner_ids = results['ner_ids']
+            else:
+                ner_ids = ['-1'] * len(words)
+            if 'predicted_heads' in results:
+                predicted_heads = results['predicted_heads']
+            else:
+                predicted_heads = results['predicted_head_offsets']
+
+            fields = zip(words,
+                         results['tags'],
+                         ner_ids,
+                         predicted_heads,
+                         results['predicted_relations'])
+            for word, tag, ner_id, head, relation in fields:
+                writer.writerow([word, source_file, 666, 666, tag, ner_id, head, relation])
+            writer.writerow([])
+
+
 def get_instance_source_file(instance):
     return instance.get('metadata')['example_id'].split('##')[0]
 
@@ -111,7 +148,7 @@ parser.add_argument('-f', dest='force_output', action='store_true',
 args = parser.parse_args()
 
 for subtask in args.subtasks:
-    assert subtask in [1, 2], 'Subtask not supported: {}'.format(subtask)
+    assert subtask in [1, 2, 3], 'Subtask not supported: {}'.format(subtask)
 input_data = Path(args.input_data)
 output_dir = Path(args.prediction_output)
 assert input_data.exists()
@@ -134,6 +171,8 @@ if 1 in args.subtasks:
     write_task1_predictions(input_files, output_dir, predicted_instances)
 if 2 in args.subtasks:
     write_task2_predictions(output_dir, predicted_instances)
+if 3 in args.subtasks:
+    write_task3_predictions(output_dir, predicted_instances)
 
 print('Creating archive...')
 with ZipFile(Path(output_dir, args.submission_file), 'w') as zf:
