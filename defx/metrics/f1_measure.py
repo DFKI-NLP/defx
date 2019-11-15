@@ -1,3 +1,4 @@
+from statistics import mean
 from typing import Dict, List, Optional, Set
 from collections import defaultdict
 
@@ -14,22 +15,25 @@ from defx.util.index_to_relation_and_type_mapping import map_index_to_relation_h
 @Metric.register("f1-measure")
 class F1Measure(Metric):
     """
-    Computes F1 score for relation classification on a token level.
+    Computes macro-averaged F1 score for relation classification on a token level.
     """
     def __init__(self,
                  vocabulary: Vocabulary,
                  negative_label: str,
-                 average: str = "macro",
                  label_namespace: str = "labels",
-                 ignored_labels: List[str] = None) -> None:
+                 evaluated_labels: List[str] = None) -> None:
 
         self._label_vocabulary = vocabulary.get_index_to_token_vocabulary(label_namespace)
-        self._average = average
-        self._ignored_labels = ignored_labels
+        if evaluated_labels is None:
+            self.evaluated_labels = list(self._label_vocabulary.values())
+            self.evaluated_labels.remove(negative_label)
+        else:
+            self.evaluated_labels = evaluated_labels
 
         self._true_positives: Dict[str, int] = defaultdict(int)
         self._false_positives: Dict[str, int] = defaultdict(int)
         self._false_negatives: Dict[str, int] = defaultdict(int)
+        self._support: Dict[str, int] = defaultdict(int)
 
         assert self._label_vocabulary[0] == negative_label, 'Negative label should have index 0'
         self._negative_label_idx = 0
@@ -86,7 +90,7 @@ class F1Measure(Metric):
                     head_and_type_idx=pred_head_and_type_idx
                 )
                 pred_head, pred_label = pred_head_and_type
-                if pred_label not in self._ignored_labels:
+                if pred_label in self.evaluated_labels:
                     predicted_tuples.append(
                         (token_idx, pred_head, pred_label)
                     )
@@ -97,10 +101,11 @@ class F1Measure(Metric):
                     gold_head_and_type_idx
                 )
                 gold_head, gold_label = gold_head_and_type
-                if gold_label not in self._ignored_labels:
+                if gold_label in self.evaluated_labels:
                     gold_tuples.append(
                         (token_idx, gold_head, gold_label)
                     )
+                    self._support[gold_label] += 1
 
             for idx_head_and_type in predicted_tuples:
                 relation_type = idx_head_and_type[2]
@@ -131,6 +136,11 @@ class F1Measure(Metric):
         all_tags.update(self._false_positives.keys())
         all_tags.update(self._false_negatives.keys())
         all_metrics = {}
+
+        overall_precision_values = []
+        overall_recall_values = []
+        overall_f1_values = []
+
         for tag in all_tags:
             precision, recall, f1_measure = self._compute_metrics(self._true_positives[tag],
                                                                   self._false_positives[tag],
@@ -138,17 +148,26 @@ class F1Measure(Metric):
             precision_key = "precision" + "-" + tag
             recall_key = "recall" + "-" + tag
             f1_key = "f1-measure" + "-" + tag
+            support_key = "support" + "-" + tag
             all_metrics[precision_key] = precision
             all_metrics[recall_key] = recall
             all_metrics[f1_key] = f1_measure
+            all_metrics[support_key] = self._support[tag]
+            if tag in self.evaluated_labels:
+                overall_precision_values.append(precision)
+                overall_recall_values.append(recall)
+                overall_f1_values.append(f1_measure)
 
-        # Compute the precision, recall and f1 for all spans jointly.
-        precision, recall, f1_measure = self._compute_metrics(sum(self._true_positives.values()),
-                                                              sum(self._false_positives.values()),
-                                                              sum(self._false_negatives.values()))
-        all_metrics["precision-overall"] = precision
-        all_metrics["recall-overall"] = recall
-        all_metrics["f1-measure-overall"] = f1_measure
+        # If no samples are given, simply return 0
+        if len(overall_precision_values) < 1:
+            all_metrics["precision-overall"] = 0
+            all_metrics["recall-overall"] = 0
+            all_metrics["f1-measure-overall"] = 0
+        else:
+            all_metrics["precision-overall"] = mean(overall_precision_values)
+            all_metrics["recall-overall"] = mean(overall_recall_values)
+            all_metrics["f1-measure-overall"] = mean(overall_f1_values)
+
         if reset:
             self.reset()
         return all_metrics

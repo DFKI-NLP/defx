@@ -45,7 +45,7 @@ local encoder_hidden_dim = 50;
       "hidden_size": 50,
       "label_namespace": "relation_labels",
       "negative_label": "0",
-      "ignored_labels": ["0", "Supplements"],
+      "evaluated_labels": ['Direct-Defines', 'Indirect-Defines', 'Refers-To', 'AKA', 'Qualifies'],
     }
   },
   "iterator": {
@@ -61,7 +61,7 @@ local encoder_hidden_dim = 50;
     "patience": 20,
     "cuda_device": std.parseInt(std.extVar("ALLENNLP_DEVICE")),
     "validation_metric": "-loss",
-    "num_epochs": 100,
+    "num_epochs": 10,
     "grad_clipping": 5.0,
   },
 }

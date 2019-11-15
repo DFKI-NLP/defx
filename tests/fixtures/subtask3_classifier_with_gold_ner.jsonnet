@@ -43,6 +43,7 @@
       "hidden_size": 5,
       "label_namespace": "relation_labels",
       "negative_label": "0",
+      "evaluated_labels": ['Direct-Defines', 'Indirect-Defines', 'Refers-To', 'AKA', 'Qualifies'],
     }
   },
   "iterator": {

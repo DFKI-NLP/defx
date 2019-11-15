@@ -36,8 +36,8 @@ class RelationScorer(Model):
         The label of the negative relation class.
     verbose_metrics: ``bool``, optional(default = False)
         Enable to print detailed per-class metrics.
-    ignored_labels: ``List[str]``, optional(default = [negative_label])
-        Relation labels to ignore in the f1 score evaluation, defaults to the negative class only.
+    evaluated_labels: ``List[str]``, optional(default = [negative_label])
+        Relation labels to evaluate in the aggregated f1 score evaluation.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
@@ -50,7 +50,7 @@ class RelationScorer(Model):
                  label_namespace: str = "labels",
                  negative_label: str = "0",
                  verbose_metrics: bool = False,
-                 ignored_labels: List[str] = None,
+                 evaluated_labels: List[str] = None,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
@@ -72,16 +72,10 @@ class RelationScorer(Model):
 
         self.metrics = {"accuracy": CategoricalAccuracy()}
         self._verbose_metrics = verbose_metrics
-        if not ignored_labels:
-            ignored_labels = [negative_label]
-        else:
-            if negative_label not in ignored_labels:
-                ignored_labels.append(negative_label)
         self._f1_metric = F1Measure(vocabulary=vocab,
                                     negative_label=negative_label,
-                                    average='macro',
                                     label_namespace=label_namespace,
-                                    ignored_labels=ignored_labels)
+                                    evaluated_labels=evaluated_labels)
 
         initializer(self)
 

@@ -55,7 +55,7 @@ local SEED = 0;
       "hidden_size": 100,
       "label_namespace": "relation_labels",
       "negative_label": "0",
-      "ignored_labels": ["0", "Supplements"],
+      "evaluated_labels": ['Direct-Defines', 'Indirect-Defines', 'Refers-To', 'AKA', 'Qualifies'],
     }
   },
   "iterator": {
