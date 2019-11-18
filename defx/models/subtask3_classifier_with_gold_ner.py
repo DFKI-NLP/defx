@@ -38,6 +38,7 @@ class Subtask3ClassifierWithGoldNer(Model):
                  encoder: Seq2SeqEncoder,
                  relation_scorer: RelationScorer,
                  ner_tag_namespace: str = 'tags',
+                 ignore_ner: bool = False,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab=vocab, regularizer=regularizer)
@@ -47,6 +48,7 @@ class Subtask3ClassifierWithGoldNer(Model):
         self.relation_scorer = relation_scorer
         self.encoder = encoder
         self._ner_tag_namespace = ner_tag_namespace
+        self._ignore_ner = ignore_ner
 
         initializer(self)
 
@@ -96,8 +98,11 @@ class Subtask3ClassifierWithGoldNer(Model):
 
         # Shape: batch x seq_len x emb_dim
         encoded_text = self.encoder(embedded_text_input, mask)
-        embedded_tags = self.ner_tag_embedder(tags)
-        encoded_sequence = torch.cat([encoded_text, embedded_tags], dim=2)
+        if self._ignore_ner:
+            encoded_sequence = encoded_text
+        else:
+            embedded_tags = self.ner_tag_embedder(tags)
+            encoded_sequence = torch.cat([encoded_text, embedded_tags], dim=2)
 
         output_dict = self.relation_scorer(encoded_sequence,
                                            mask,
