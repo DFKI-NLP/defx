@@ -40,13 +40,13 @@ class Subtask3PredictorTest(TestCase):
         words = result.get('words')
         assert words == tokenized_text
 
-        relations = result.get('predicted_relations')
+        relations = result.get('relations')
         assert len(relations) == len(words)
 
-        relation_head_idxs = result.get('predicted_head_offsets')
+        relation_head_idxs = result.get('head_offsets')
         assert len(relation_head_idxs) == len(words)
 
-        relation_heads = result.get('predicted_heads')
+        relation_heads = result.get('heads')
         assert len(relation_heads) == len(words)
         for head in relation_heads:
             assert head in ner_ids

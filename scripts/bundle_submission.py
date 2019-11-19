@@ -114,16 +114,16 @@ def write_subtask3_output_file(output_file, predictions):
                 ner_ids = results['ner_ids']
             else:
                 ner_ids = ['-1'] * len(words)
-            if 'predicted_heads' in results:
-                predicted_heads = results['predicted_heads']
+            if 'heads' in results:
+                predicted_heads = results['heads']
             else:
-                predicted_heads = results['predicted_head_offsets']
+                predicted_heads = results['head_offsets']
 
             fields = zip(words,
                          results['tags'],
                          ner_ids,
                          predicted_heads,
-                         results['predicted_relations'])
+                         results['relations'])
             for word, tag, ner_id, head, relation in fields:
                 writer.writerow([word, source_file, 666, 666, tag, ner_id, head, relation])
             writer.writerow([])

@@ -168,8 +168,8 @@ class RelationScorer(Model):
             predicted_head_offsets.append(sent_heads)
             predicted_types.append(sent_types)
 
-        output_dict['predicted_head_offsets'] = predicted_head_offsets
-        output_dict['predicted_relations'] = predicted_types
+        output_dict['head_offsets'] = predicted_head_offsets
+        output_dict['relations'] = predicted_types
 
         if 'ner_ids' in output_dict:
             predicted_heads = []
@@ -179,7 +179,7 @@ class RelationScorer(Model):
                     for offset in predicted_head_offsets[batch_idx]
                 ]
                 predicted_heads.append(batch_predicted_heads)
-            output_dict['predicted_heads'] = predicted_heads
+            output_dict['heads'] = predicted_heads
 
         return output_dict
 
