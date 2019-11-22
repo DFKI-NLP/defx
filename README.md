@@ -23,3 +23,8 @@ python scripts/bundle_submission.py data/deft_split/subtask1_raw/test/ data/resu
 
 ### Call the official evaluation metrics
 python scripts/evaluate.py data/deft_split/subtask1_raw/dev/ data/results/subtask1_example/
+
+## Running a demo
+
+Install streamlit and spacy, and execute:
+  streamlit run streamlit_demo.py -- data/runs/joint_bert_classifier/model.tar.gz
