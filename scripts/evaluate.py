@@ -254,13 +254,13 @@ if len(results) > 1:
         print(f'Subtask 2 score: {f1_mean * 100:.2f}+-{f1_stdev * 100:.2f} F1')
 
     if 3 in args.subtasks:
-        precision_values = [r['subtask3']["macro"]["precision"] for r in results]
+        precision_values = [r['subtask3']["macro"]["p"] for r in results]
         summary['subtask3_precision_mean'] = mean(precision_values)
         summary['subtask3_precision_stdev'] = stdev(precision_values)
-        recall_values = [r['subtask3']["macro"]["recall"] for r in results]
+        recall_values = [r['subtask3']["macro"]["r"] for r in results]
         summary['subtask3_recall_mean'] = mean(recall_values)
         summary['subtask3_recall_stdev'] = stdev(recall_values)
-        f1_values = [r['subtask3']["macro"]["f1-score"] for r in results]
+        f1_values = [r['subtask3']["macro"]["f"] for r in results]
         f1_mean = mean(f1_values)
         f1_stdev = stdev(f1_values)
         summary['subtask3_f1_mean'] = f1_mean
