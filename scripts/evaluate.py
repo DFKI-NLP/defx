@@ -1,12 +1,18 @@
 import argparse
 import csv
+import json
+import os
 import warnings
 from pathlib import Path
 from pprint import pprint
+from statistics import mean, stdev
 import sys
 
 # Import the official evaluation scripts
 from yaml import safe_load
+
+sys.path.append('.')
+from defx.util.predictions_writer import PredictionsWriter
 
 sys.path.append('data/deft_corpus/evaluation/program')
 from evaluation_sub1 import get_gold_and_pred_labels as task1_get_labels
@@ -122,56 +128,145 @@ def has_relation_and_head(row):
     return row[-1] != "0" and row[-2] != "0"
 
 
-parser = argparse.ArgumentParser(description='Runs the official evaluation')
-parser.add_argument('gold_input', type=str,
-                    help='Gold labeled documents')
-parser.add_argument('pred_input', type=str,
-                    help='Predicted document labels')
+parser = argparse.ArgumentParser(
+    description='Runs model prediction, bundling, and official evaluation'
+)
+parser.add_argument('model_dir', type=str,
+                    help='Directory with trained model(s)')
+parser.add_argument('--predictor', default='subtask1_predictor')
 parser.add_argument('--verbose', action='store_true',
                     help='Print verbose metrics')
 parser.add_argument('--subtasks', nargs="+", type=int,
                     default=[1], help='Choose which subtasks to evaluate')
+parser.add_argument('--split', default='dev',
+                    help='The dataset split for evaluation')
+parser.add_argument('--cuda-device', default=-1, type=int,
+                    help='The cuda device used for predictions')
+parser.add_argument('-f', dest='force_pred', action='store_true',
+                    help='Force creation of new predictions')
 args = parser.parse_args()
 
 for subtask in args.subtasks:
     assert subtask in [1, 2, 3], 'Subtask not supported: {}'.format(subtask)
 
-gold_dir = Path(args.gold_input)
-pred_dir = Path(args.pred_input)
-config_path = Path('data/deft_corpus/evaluation/program/configs/eval_test.yaml')
-assert config_path.exists() and config_path.is_file(), 'Config not found'
-with config_path.open() as cfg_file:
-    config = safe_load(cfg_file)
+RAW_BASE_PATH = 'data/deft_split/raw/'
+JSONL_BASE_PATH = 'data/deft_split/jsonl/'
+split = args.split
+model_input = Path(JSONL_BASE_PATH, f'{split}.jsonl')
+gold_dir = Path(RAW_BASE_PATH, split)
 
-if 1 in args.subtasks:
-    eval_labels = config['task_1']['eval_labels']
-    task1_report = evaluate_subtask(subtask=1,
-                                    eval_labels=eval_labels,
-                                    gold_dir=gold_dir,
-                                    pred_dir=pred_dir)
-    if args.verbose:
-        print('Subtask1 report:')
-        pprint(task1_report)
-    print(f'Subtask 1 score: {task1_report["1"]["f1-score"]*100:.2f} F1')
+results = []
+for cwd, _, curr_files in os.walk(args.model_dir):
+    if 'model.tar.gz' in curr_files:
+        pred_dir = Path(cwd, f'{split}_submission')
+        model_archive = Path(cwd, 'model.tar.gz')
+        print('Evaluating model:', model_archive)
+        pred_writer = PredictionsWriter(
+            input_data=model_input,
+            output_dir=pred_dir,
+            model_archive=model_archive,
+            predictor=args.predictor,
+            subtasks=args.subtasks,
+            cuda_device=args.cuda_device
+        )
+        if args.force_pred or pred_writer.missing_predictions():
+            pred_writer.run()  # Generate predictions and bundle a submission
 
-if 2 in args.subtasks:
-    eval_labels = config['task_2']['eval_labels']
-    task2_report = evaluate_subtask(subtask=2,
-                                    eval_labels=eval_labels,
-                                    gold_dir=gold_dir,
-                                    pred_dir=pred_dir)
-    if args.verbose:
-        print('Subtask2 report:')
-        pprint(task2_report)
-    print(f'Subtask 2 score: {task2_report["macro avg"]["f1-score"]*100:.2f} F1')
+        config_path = Path('data/deft_corpus/evaluation/program/configs/eval_test.yaml')
+        assert config_path.exists() and config_path.is_file(), 'Config not found'
+        with config_path.open() as cfg_file:
+            config = safe_load(cfg_file)
 
-if 3 in args.subtasks:
-    eval_labels = config['task_3']['eval_labels']
-    task3_report = evaluate_subtask(subtask=3,
-                                    eval_labels=eval_labels,
-                                    gold_dir=gold_dir,
-                                    pred_dir=pred_dir)
-    if args.verbose:
-        print('Subtask3 report:')
-        pprint(task3_report)
-    print(f'Subtask 3 score: {task3_report["macro"]["f"]*100:.2f} F1')
+        result = {}
+
+        if 1 in args.subtasks:
+            eval_labels = config['task_1']['eval_labels']
+            task1_report = evaluate_subtask(subtask=1,
+                                            eval_labels=eval_labels,
+                                            gold_dir=gold_dir,
+                                            pred_dir=pred_dir)
+            if args.verbose:
+                print('Subtask1 report:')
+                pprint(task1_report)
+            print(f'Subtask 1 score: {task1_report["1"]["f1-score"]*100:.2f} F1')
+            result['subtask1'] = task1_report
+
+        if 2 in args.subtasks:
+            eval_labels = config['task_2']['eval_labels']
+            task2_report = evaluate_subtask(subtask=2,
+                                            eval_labels=eval_labels,
+                                            gold_dir=gold_dir,
+                                            pred_dir=pred_dir)
+            if args.verbose:
+                print('Subtask2 report:')
+                pprint(task2_report)
+            print(f'Subtask 2 score: {task2_report["macro avg"]["f1-score"]*100:.2f} F1')
+            result['subtask2'] = task2_report
+
+        if 3 in args.subtasks:
+            eval_labels = config['task_3']['eval_labels']
+            task3_report = evaluate_subtask(subtask=3,
+                                            eval_labels=eval_labels,
+                                            gold_dir=gold_dir,
+                                            pred_dir=pred_dir)
+            if args.verbose:
+                print('Subtask3 report:')
+                pprint(task3_report)
+            print(f'Subtask 3 score: {task3_report["macro"]["f"]*100:.2f} F1')
+            result['subtask3'] = task3_report
+
+        with Path(cwd, f'{split}_results.json').open('w') as f:
+            json.dump(result, f)
+        results.append(result)
+
+assert len(results) > 0, 'Missing results'
+if len(results) > 1:
+    # Compute summaries over multiple models
+
+    print('Model summary:')
+    summary = {}
+    if 1 in args.subtasks:
+        precision_values = [r['subtask1']["1"]["precision"] for r in results]
+        summary['subtask1_precision_mean'] = mean(precision_values)
+        summary['subtask1_precision_stdev'] = stdev(precision_values)
+        recall_values = [r['subtask1']["1"]["recall"] for r in results]
+        summary['subtask1_recall_mean'] = mean(recall_values)
+        summary['subtask1_recall_stdev'] = stdev(recall_values)
+        f1_values = [r['subtask1']["1"]["f1"] for r in results]
+        f1_mean = mean(f1_values)
+        f1_stdev = stdev(f1_values)
+        summary['subtask1_f1_mean'] = f1_mean
+        summary['subtask1_f1_stdev'] = f1_stdev
+        print(f'Subtask 1 score: {f1_mean * 100:.2f}+-{f1_stdev * 100:.2f} F1')
+
+    if 2 in args.subtasks:
+        precision_values = [r['subtask2']["macro avg"]["precision"] for r in results]
+        summary['subtask2_precision_mean'] = mean(precision_values)
+        summary['subtask2_precision_stdev'] = stdev(precision_values)
+        recall_values = [r['subtask2']["macro avg"]["recall"] for r in results]
+        summary['subtask2_recall_mean'] = mean(recall_values)
+        summary['subtask2_recall_stdev'] = stdev(recall_values)
+        f1_values = [r['subtask2']["macro avg"]["f1-score"] for r in results]
+        f1_mean = mean(f1_values)
+        f1_stdev = stdev(f1_values)
+        summary['subtask2_f1_mean'] = f1_mean
+        summary['subtask2_f1_stdev'] = f1_stdev
+        print(f'Subtask 2 score: {f1_mean * 100:.2f}+-{f1_stdev * 100:.2f} F1')
+
+    if 3 in args.subtasks:
+        precision_values = [r['subtask3']["macro"]["precision"] for r in results]
+        summary['subtask3_precision_mean'] = mean(precision_values)
+        summary['subtask3_precision_stdev'] = stdev(precision_values)
+        recall_values = [r['subtask3']["macro"]["recall"] for r in results]
+        summary['subtask3_recall_mean'] = mean(recall_values)
+        summary['subtask3_recall_stdev'] = stdev(recall_values)
+        f1_values = [r['subtask3']["macro"]["f1-score"] for r in results]
+        f1_mean = mean(f1_values)
+        f1_stdev = stdev(f1_values)
+        summary['subtask3_f1_mean'] = f1_mean
+        summary['subtask3_f1_stdev'] = f1_stdev
+        print(f'Subtask 3 score: {f1_mean * 100:.2f}+-{f1_stdev * 100:.2f} F1')
+
+    pprint(summary)
+    with Path(args.model_dir, 'summary.json').open('w') as f:
+        json.dump(summary, f)
