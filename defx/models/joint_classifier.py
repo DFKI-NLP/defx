@@ -225,19 +225,17 @@ class JointClassifier(Model):
         # Set NER metrics
         metrics_to_return = {metric_name: metric.get_metric(reset) for
                              metric_name, metric in self.ner_metrics.items()}
-        f1_dict = self.ner_f1.get_metric(reset=reset)
+        ner_metrics = self.ner_f1.get_metric(reset=reset)
         if self._verbose_metrics:
             metrics_to_return.update({
-                'ner_' + x: y for x, y in f1_dict.items()
+                'ner_' + x: y for x, y in ner_metrics.items()
             })
         else:
-            metrics_to_return.update({
-                'ner_' + x: y for x, y in f1_dict.items() if "overall" in x
-            })
+            metrics_to_return['ner_f1'] = ner_metrics['f1-measure-overall']
 
         # Attach RE metrics
         re_metrics = self.relation_scorer.get_metrics(reset=reset)
-        metrics_to_return.update({'re_' + x: y for x, y in re_metrics.items()})
+        metrics_to_return['re_f1'] = re_metrics['f1-measure-overall']
 
         return metrics_to_return
 
