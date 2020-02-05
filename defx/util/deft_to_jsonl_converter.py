@@ -52,6 +52,10 @@ def _convert_deft_file(input_file: Path) -> List[Dict[str, Any]]:
     examples = []
     example_count = 0
     with input_file.open() as file_handler:
+        while _peek_line(file_handler).strip() == '':
+            file_handler.readline()  # Remove empty newlines at the beginning of a file
+            continue
+
         while True:
             next_line = _peek_line(file_handler)
             if '\n' not in next_line:
@@ -141,10 +145,8 @@ def _parse_sentence(input_file: TextIO) -> Dict[str, Any]:
         'relations': []
     }
     line = input_file.readline()
-    while True:
+    while line != '':
         if line.strip() == '':
-            if line == '':
-                break  # End of file, stop parsing.
             if _is_chapter_start(sentence):
                 line = input_file.readline()
                 continue  # End of a chapter, remove the newline and continue
