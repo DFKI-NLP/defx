@@ -49,7 +49,6 @@ class RelationScorer(Model):
                  hidden_size: int,
                  label_namespace: str = "labels",
                  negative_label: str = "0",
-                 verbose_metrics: bool = False,
                  evaluated_labels: List[str] = None,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
@@ -70,8 +69,7 @@ class RelationScorer(Model):
         self._b = Parameter(torch.Tensor(hidden_size))
         nn.init.normal_(self._b)
 
-        self.metrics = {"accuracy": CategoricalAccuracy()}
-        self._verbose_metrics = verbose_metrics
+        self._accuracy = CategoricalAccuracy()
         self._f1_metric = F1Measure(vocabulary=vocab,
                                     negative_label=negative_label,
                                     label_namespace=label_namespace,
@@ -137,8 +135,7 @@ class RelationScorer(Model):
                         )
                         gold_relations[example_idx, token_idx] = logit_idx
 
-            for metric in self.metrics.values():
-                metric(logits, gold_relations, mask.float())
+            self._accuracy(logits, gold_relations, mask.float())
             self._f1_metric(logits, gold_relations, mask)
             loss = sequence_cross_entropy_with_logits(logits, gold_relations, mask)
             output_dict["loss"] = loss
@@ -185,15 +182,7 @@ class RelationScorer(Model):
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        metrics_to_return = {metric_name: metric.get_metric(reset) for
-                             metric_name, metric in self.metrics.items()}
-
-        f1_dict = self._f1_metric.get_metric(reset=reset)
-        if self._verbose_metrics:
-            metrics_to_return.update(f1_dict)
-        else:
-            metrics_to_return.update({
-                x: y for x, y in f1_dict.items() if
-                "overall" in x})
-
-        return metrics_to_return
+        return {
+            're_acc': self._accuracy.get_metric(reset=reset),
+            're_f1': self._f1_metric.get_metric(reset=reset)['f1-measure-overall']
+        }

@@ -33,8 +33,6 @@ class JointClassifier(Model):
         A subtask model, that performs scoring of relations between entities.
     ner_tag_namespace : ``str``
         The vocabulary namespace of ner tags.
-    verbose_ner_metrics : ``bool``, optional (default=``False``)
-        Prints verbose f1 score metrics per ner tag type if enabled.
     evaluated_ner_labels : ``List[str]``, optional (default=``None``)
         The list of ner tag types that are to be used for f1 score computation.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
@@ -49,7 +47,6 @@ class JointClassifier(Model):
                  encoder: Seq2SeqEncoder,
                  relation_scorer: RelationScorer,
                  ner_tag_namespace: str = 'tags',
-                 verbose_ner_metrics: bool = False,
                  evaluated_ner_labels: List[str] = None,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
@@ -57,7 +54,6 @@ class JointClassifier(Model):
 
         self.text_field_embedder = text_field_embedder
         self.encoder = encoder
-        self._verbose_metrics = verbose_ner_metrics
 
         # NER subtask 2
         self._ner_label_encoding = 'BIO'
@@ -66,10 +62,7 @@ class JointClassifier(Model):
         num_ner_tags = self.vocab.get_vocab_size(ner_tag_namespace)
         self.tag_projection_layer = TimeDistributed(Linear(ner_input_dim,
                                                            num_ner_tags))
-        self.ner_metrics = {
-            "ner_accuracy": CategoricalAccuracy(),
-            "ner_accuracy3": CategoricalAccuracy(top_k=3)
-        }
+        self.ner_accuracy = CategoricalAccuracy()
         if evaluated_ner_labels is None:
             ignored_classes = None
         else:
@@ -194,8 +187,7 @@ class JointClassifier(Model):
                 for j, tag_id in enumerate(instance_tags):
                     class_probabilities[i, j, tag_id] = 1
 
-            for metric in self.ner_metrics.values():
-                metric(class_probabilities, tags, mask.float())
+            self.ner_accuracy(class_probabilities, tags, mask.float())
             self.ner_f1(class_probabilities, tags, mask.float())
 
             output_dict['loss'] = output_dict['ner_loss'] + re_output['loss']
@@ -222,20 +214,11 @@ class JointClassifier(Model):
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        # Set NER metrics
-        metrics_to_return = {metric_name: metric.get_metric(reset) for
-                             metric_name, metric in self.ner_metrics.items()}
-        ner_metrics = self.ner_f1.get_metric(reset=reset)
-        if self._verbose_metrics:
-            metrics_to_return.update({
-                'ner_' + x: y for x, y in ner_metrics.items()
-            })
-        else:
-            metrics_to_return['ner_f1'] = ner_metrics['f1-measure-overall']
-
-        # Attach RE metrics
         re_metrics = self.relation_scorer.get_metrics(reset=reset)
-        metrics_to_return['re_f1'] = re_metrics['f1-measure-overall']
-
-        return metrics_to_return
+        return {
+            'ner_acc': self.ner_accuracy.get_metric(reset=reset),
+            'ner_f1': self.ner_f1.get_metric(reset=reset)['f1-measure-overall'],
+            're_acc': re_metrics['re_acc'],
+            're_f1': re_metrics['re_f1'],
+        }
 

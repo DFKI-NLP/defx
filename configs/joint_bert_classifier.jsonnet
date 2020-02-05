@@ -58,7 +58,6 @@ local SEED = 0;
       "evaluated_labels": ['Direct-Defines', 'Indirect-Defines', 'Refers-To', 'AKA', 'Qualifies'],
     },
     "evaluated_ner_labels": ['Term', 'Alias-Term', 'Referential-Term', 'Definition', 'Referential-Definition', 'Qualifier'],
-    "verbose_ner_metrics": false,
   },
   "iterator": {
     "type": "basic",
