@@ -48,6 +48,7 @@ class JointClassifier(Model):
                  relation_scorer: RelationScorer,
                  ner_tag_namespace: str = 'tags',
                  evaluated_ner_labels: List[str] = None,
+                 re_loss_weight: float = 1.0,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab=vocab, regularizer=regularizer)
@@ -91,6 +92,7 @@ class JointClassifier(Model):
         # RE subtask 3
         self.ner_tag_embedder = ner_tag_embedder
         self.relation_scorer = relation_scorer
+        self._re_loss_weight = re_loss_weight
 
         initializer(self)
 
@@ -190,7 +192,7 @@ class JointClassifier(Model):
             self.ner_accuracy(class_probabilities, tags, mask.float())
             self.ner_f1(class_probabilities, tags, mask.float())
 
-            output_dict['loss'] = output_dict['ner_loss'] + re_output['loss']
+            output_dict['loss'] = output_dict['ner_loss'] + self._re_loss_weight * re_output['loss']
 
         # Attach metadata
         if metadata is not None:
