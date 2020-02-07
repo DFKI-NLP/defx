@@ -50,6 +50,8 @@ class RelationScorer(Model):
                  label_namespace: str = "labels",
                  negative_label: str = "0",
                  evaluated_labels: List[str] = None,
+                 loss_gamma: float = None,
+                 label_smoothing: float = None,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
@@ -60,6 +62,8 @@ class RelationScorer(Model):
         self._negative_label_idx = self.vocab.get_token_index(negative_label,
                                                               namespace=label_namespace)
         assert self._negative_label_idx == 0, "negative label idx is supposed to be 0"
+        self._loss_gamma = loss_gamma
+        self._label_smoothing = label_smoothing
 
         # projection layers
         self._U = Linear(input_size, hidden_size, bias=False)
@@ -137,7 +141,9 @@ class RelationScorer(Model):
 
             self._accuracy(logits, gold_relations, mask.float())
             self._f1_metric(logits, gold_relations, mask)
-            loss = sequence_cross_entropy_with_logits(logits, gold_relations, mask)
+            loss = sequence_cross_entropy_with_logits(logits, gold_relations, mask,
+                                                      gamma=self._loss_gamma,
+                                                      label_smoothing=self._label_smoothing)
             output_dict["loss"] = loss
 
         return output_dict
