@@ -274,3 +274,35 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
         assert 'sentence_labels' not in instance.fields
         assert 'relations' not in instance.fields
         assert 'relation_root_idxs' not in instance.fields
+
+    @staticmethod
+    def test_ner_tag_splitting():
+        reader = DeftJsonlReader(subtasks=[2], split_ner_labels=True)
+        tags = [
+            'B-Term', 'I-Term', 'O', 'B-Definition', 'I-Definition', 'B-Term', 'O',
+            'B-Referential-Definition', 'I-Referential-Definition', 'O', 'B-Alias-Term', 'I-Alias-Term',
+            'O', 'B-Ordered-Term', 'I-Ordered-Term', 'O', 'B-Referential-Term', 'I-Referential-Term',
+            'O', 'B-Secondary-Definition', 'I-Secondary-Definition',
+            'O', 'B-Ordered-Definition', 'I-Ordered-Definition',
+            'O', 'B-Referential-Definition', 'I-Referential-Definition',
+            'O', 'B-Qualifier', 'I-Qualifier',
+        ]
+
+        expected_coarse_tags = [
+            'B-Term', 'I-Term', 'O', 'B-Definition', 'I-Definition', 'B-Term', 'O', 'B-Definition', 'I-Definition',
+            'O', 'B-Term', 'I-Term', 'O', 'B-Term', 'I-Term', 'O', 'B-Term', 'I-Term', 'O',
+            'B-Definition', 'I-Definition', 'O', 'B-Definition', 'I-Definition', 'O', 'B-Definition', 'I-Definition',
+            'O', 'B-Qualifier', 'I-Qualifier',
+        ]
+
+        expected_modifier_tags = [
+            'O', 'O', 'O', 'O', 'O', 'O', 'O', 'B-Referential', 'I-Referential', 'O', 'B-Alias', 'I-Alias', 'O',
+            'B-Ordered', 'I-Ordered', 'O', 'B-Referential', 'I-Referential', 'O', 'B-Secondary', 'I-Secondary',
+            'O', 'B-Ordered', 'I-Ordered', 'O', 'B-Referential', 'I-Referential', 'O', 'O', 'O',
+        ]
+
+        assert len(tags) == len(expected_coarse_tags) == len(expected_modifier_tags), 'The test is wrong :/'
+
+        coarse_tags, modifier_tags = reader._split_tags(tags)
+        assert coarse_tags == expected_coarse_tags
+        assert modifier_tags == expected_modifier_tags

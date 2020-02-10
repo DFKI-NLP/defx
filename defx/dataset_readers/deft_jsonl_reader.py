@@ -23,6 +23,7 @@ class DeftJsonlReader(DatasetReader):
                  subtasks: List[int],
                  lazy: bool = False,
                  sample_limit: int = None,
+                 split_ner_labels: bool = False,
                  token_indexers: Dict[str, TokenIndexer] = None):
         super().__init__(lazy)
         default_indexer = {'tokens': SingleIdTokenIndexer()}
@@ -31,10 +32,11 @@ class DeftJsonlReader(DatasetReader):
             assert subtask in DeftJsonlReader.VALID_SUBTASKS, "invalid subtask"
         self._subtasks = subtasks
         self._sample_limit = sample_limit
+        self._split_ner_labels = split_ner_labels
 
         # "Subtask 2 only" dataset readers should use the labels namespace
         # for the sequence tags, but others should use 'tags'
-        if self._subtasks == [2]:
+        if self._subtasks == [2] and not split_ner_labels:
             self._tags_namespace = 'labels'
         else:
             self._tags_namespace = 'tags'
@@ -95,11 +97,24 @@ class DeftJsonlReader(DatasetReader):
                  for label_dict in sentence_labels])
 
         if tags and (2 in self._subtasks or self._subtasks == [3]):
-            tags_field = SequenceLabelField(
-                labels=tags,
-                sequence_field=text_field,
-                label_namespace=self._tags_namespace)
-            fields['tags'] = tags_field
+            if self._split_ner_labels:
+                coarse_tags, modifier_tags = self._split_tags(tags)
+                coarse_tags_field = SequenceLabelField(
+                    labels=coarse_tags,
+                    sequence_field=text_field,
+                    label_namespace='coarse_tags')
+                fields['coarse_tags'] = coarse_tags_field
+                modifier_tags_field = SequenceLabelField(
+                    labels=modifier_tags,
+                    sequence_field=text_field,
+                    label_namespace='modifier_tags')
+                fields['modifier_tags'] = modifier_tags_field
+            else:
+                tags_field = SequenceLabelField(
+                    labels=tags,
+                    sequence_field=text_field,
+                    label_namespace=self._tags_namespace)
+                fields['tags'] = tags_field
 
         if relation_root_idxs and 3 in self._subtasks:
             root_idxs_field = ListField([IndexField(root_idx, text_field)
@@ -114,3 +129,40 @@ class DeftJsonlReader(DatasetReader):
             )
 
         return Instance(fields)
+
+    def _split_tags(self, tags: List[str]) -> (List[str], List[str]):
+        coarse_tags = []
+        modifier_tags = []
+        for tag in tags:
+            if tag == 'O':
+                coarse_tags.append('O')
+                modifier_tags.append('O')
+            else:
+                tag_splits = tag.split('-')
+
+                if len(tag_splits) == 2:
+                    bio_tag, coarse_tag = tag_splits
+                    modifier_tag = None
+                elif len(tag_splits) == 3:
+                    bio_tag, modifier_tag, coarse_tag = tag_splits
+                    if coarse_tag == 'frag':
+                        coarse_tag = modifier_tag
+                        modifier_tag = 'frag'
+                elif len(tag_splits) == 4:
+                    assert tag_splits[-1] == 'frag'
+                    # Just ignore this very special case, e.g. 'B-Alias-Term-frag'
+                    coarse_tags.append('O')
+                    modifier_tags.append('O')
+                    continue
+                else:
+                    raise RuntimeError(f'Unexpected ner tag encountered: {tag}')
+
+                assert coarse_tag in ['Term', 'Definition', 'Qualifier'], f'Unknown coarse tag: {coarse_tag}'
+                coarse_tags.append(bio_tag + '-' + coarse_tag)
+
+                if modifier_tag is None:
+                    modifier_tags.append('O')
+                else:
+                    assert modifier_tag in ['Alias', 'Ordered', 'Referential', 'Secondary', 'frag'], f'Unknown modifier tag: {modifier_tag}'
+                    modifier_tags.append(bio_tag + '-' + modifier_tag)
+        return coarse_tags, modifier_tags
