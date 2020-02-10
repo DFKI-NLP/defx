@@ -1,5 +1,6 @@
 from typing import Dict, Optional, List, Any
 
+import numpy
 import torch
 import torch.nn.functional as F
 from allennlp.data import Vocabulary
@@ -31,9 +32,11 @@ class Subtask2SplitSimpleTagger(Model):
 
         # Projections into label spaces
         encoder_output_dim = self.encoder.get_output_dim()
+        self._coarse_tag_namespace = coarse_tag_namespace
         self._num_coarse_tags = self.vocab.get_vocab_size(coarse_tag_namespace)
         self._coarse_projection_layer = TimeDistributed(Linear(encoder_output_dim,
                                                                self._num_coarse_tags))
+        self._modifier_tag_namespace = modifier_tag_namespace
         self._num_modifier_tags = self.vocab.get_vocab_size(modifier_tag_namespace)
         self._modifier_projection_layer = TimeDistributed(Linear(encoder_output_dim,
                                                                  self._num_modifier_tags))
@@ -105,7 +108,55 @@ class Subtask2SplitSimpleTagger(Model):
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-        raise NotImplementedError('To be implemented')
+        coarse_probs = output_dict['coarse_probs']
+        coarse_probs = coarse_probs.cpu().data.numpy()
+        if coarse_probs.ndim == 3:
+            coarse_pred_list = [coarse_probs[i] for i in range(coarse_probs.shape[0])]
+        else:
+            coarse_pred_list = [coarse_probs]
+        batch_coarse_tags = []
+        for predictions in coarse_pred_list:
+            argmax_indices = numpy.argmax(predictions, axis=-1)
+            tags = [self.vocab.get_token_from_index(x, namespace=self._coarse_tag_namespace)
+                    for x in argmax_indices]
+            batch_coarse_tags.append(tags)
+        output_dict['coarse_tags'] = batch_coarse_tags
+
+        modifier_probs = output_dict['modifier_probs']
+        modifier_probs = modifier_probs.cpu().data.numpy()
+        if modifier_probs.ndim == 3:
+            modifier_pred_list = [modifier_probs[i] for i in range(modifier_probs.shape[0])]
+        else:
+            modifier_pred_list = [modifier_probs]
+        batch_modifier_tags = []
+        for predictions in modifier_pred_list:
+            argmax_indices = numpy.argmax(predictions, axis=-1)
+            tags = [self.vocab.get_token_from_index(x, namespace=self._modifier_tag_namespace)
+                    for x in argmax_indices]
+            batch_modifier_tags.append(tags)
+        output_dict['modifier_tags'] = batch_modifier_tags
+
+        batch_joined_tags = []
+        for batch_idx in range(len(batch_coarse_tags)):
+            joined_tags = []
+            coarse_tags = batch_coarse_tags[batch_idx]
+            modifier_tags = batch_modifier_tags[batch_idx]
+            for coarse_tag, modifier_tag in zip(coarse_tags, modifier_tags):
+                if coarse_tag == 'O':
+                    joined_tags.append('O')
+                elif modifier_tag == 'O':
+                    joined_tags.append(coarse_tag)
+                else:
+                    bio_tag, coarse_class = coarse_tag.split('-', maxsplit=1)
+                    _, modifier_class = modifier_tag.split('-', maxsplit=1)
+                    if modifier_class == 'frag':
+                        joined_tags.append(f'{bio_tag}-{coarse_class}-frag')
+                    else:
+                        joined_tags.append(f'{bio_tag}-{modifier_class}-{coarse_class}')
+            batch_joined_tags.append(joined_tags)
+        output_dict['tags'] = batch_joined_tags
+
+        return output_dict
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:

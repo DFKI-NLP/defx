@@ -21,7 +21,7 @@ class PredictionsWriter:
                  cuda_device: int = -1):
         self._predictor = Predictor.from_path(model_archive,
                                               predictor,
-                                              cuda_device= cuda_device)
+                                              cuda_device=cuda_device)
         self._input_data = input_data
         self._output_dir = output_dir
         self._subtasks = subtasks
