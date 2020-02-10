@@ -20,12 +20,14 @@ class Subtask2SplitSimpleTagger(Model):
                  encoder: Seq2SeqEncoder,
                  coarse_tag_namespace: str = 'coarse_tags',
                  modifier_tag_namespace: str = 'modifier_tags',
+                 modifier_loss_weight: float = 1.0,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab=vocab, regularizer=regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.encoder = encoder
+        self._modifier_loss_weight = modifier_loss_weight
 
         # Projections into label spaces
         encoder_output_dim = self.encoder.get_output_dim()
@@ -92,7 +94,7 @@ class Subtask2SplitSimpleTagger(Model):
 
             coarse_loss = sequence_cross_entropy_with_logits(coarse_logits, coarse_tags, mask)
             modifier_loss = sequence_cross_entropy_with_logits(modifier_logits, modifier_tags, mask)
-            output_dict['loss'] = coarse_loss + modifier_loss
+            output_dict['loss'] = coarse_loss + self._modifier_loss_weight * modifier_loss
 
         # Attach metadata
         if metadata is not None:
