@@ -1,5 +1,7 @@
 import json
-from typing import Dict, List, Iterable
+import math
+from random import random
+from typing import Dict, List, Iterable, Any
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data import DatasetReader, TokenIndexer, Instance, Token
@@ -18,21 +20,29 @@ class DeftJsonlReader(DatasetReader):
     to the jsonl format using the ``DeftToJsonlConverter``.
     """
     VALID_SUBTASKS = [1, 2, 3]
+    VALID_MAJORITY_DESCRIPTIONS = ['term_def_only', 'term_def_pair']
 
     def __init__(self,
                  subtasks: List[int],
                  lazy: bool = False,
                  sample_limit: int = None,
                  split_ner_labels: bool = False,
+                 oversampling_ratio: float = None,
+                 majority_description: str = None,
                  token_indexers: Dict[str, TokenIndexer] = None):
         super().__init__(lazy)
-        default_indexer = {'tokens': SingleIdTokenIndexer()}
-        self._token_indexers = token_indexers or default_indexer
         for subtask in subtasks:
             assert subtask in DeftJsonlReader.VALID_SUBTASKS, "invalid subtask"
+        if majority_description is not None:
+            assert majority_description in DeftJsonlReader.VALID_MAJORITY_DESCRIPTIONS
+
+        default_indexer = {'tokens': SingleIdTokenIndexer()}
+        self._token_indexers = token_indexers or default_indexer
         self._subtasks = subtasks
         self._sample_limit = sample_limit
         self._split_ner_labels = split_ner_labels
+        self._oversampling_ratio = oversampling_ratio
+        self._majority_description = majority_description
 
         # "Subtask 2 only" dataset readers should use the labels namespace
         # for the sequence tags, but others should use 'tags'
@@ -54,7 +64,7 @@ class DeftJsonlReader(DatasetReader):
                     ner_ids.index(root) if root in ner_ids else -1
                     for root in relation_roots
                 ]
-                yield self.text_to_instance(
+                instance = self.text_to_instance(
                     tokens=[Token(t) for t in example_json['tokens']],
                     sentence_labels=example_json['sentence_labels'],
                     tags=example_json['tags'],
@@ -63,6 +73,14 @@ class DeftJsonlReader(DatasetReader):
                     ner_ids=ner_ids,
                     relation_root_idxs=relation_root_idxs
                 )
+                if file_path.__contains__('train.jsonl') and self._oversampling_ratio is not None:
+                    if self._is_majority_example(example_json):
+                        yield instance
+                    else:
+                        for _ in range(self._get_num_samples()):
+                            yield instance
+                else:
+                    yield instance
 
     @overrides
     def text_to_instance(self,
@@ -166,3 +184,23 @@ class DeftJsonlReader(DatasetReader):
                     assert modifier_tag in ['Alias', 'Ordered', 'Referential', 'Secondary', 'frag'], f'Unknown modifier tag: {modifier_tag}'
                     modifier_tags.append(bio_tag + '-' + modifier_tag)
         return coarse_tags, modifier_tags
+
+    def _get_num_samples(self) -> int:
+        num_deterministic_samples = math.floor(self._oversampling_ratio)
+        additional_sample_prob = self._oversampling_ratio - num_deterministic_samples
+        if additional_sample_prob > random():
+            num_samples = num_deterministic_samples + 1
+        else:
+            num_samples = num_deterministic_samples
+        return num_samples
+
+    def _is_majority_example(self, example: Dict[str, Any]) -> bool:
+        tags = example['tags']
+        if self._majority_description == 'term_def_only':
+            unique_tags = set([tag.split('-', maxsplit=1)[1] for tag in tags if tag != 'O'])
+            return len(unique_tags) == 0 or unique_tags == {'Definition', 'Term'}
+        elif self._majority_description == 'term_def_pair':
+            sorted_start_tags = sorted([tag for tag in tags if tag.startswith('B-')])
+            return len(sorted_start_tags) == 0 or sorted_start_tags == ['B-Definition', 'B-Term']
+        else:
+            raise RuntimeError('unknown description for the majority of the examples')

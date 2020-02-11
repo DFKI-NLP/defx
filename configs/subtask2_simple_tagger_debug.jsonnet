@@ -10,6 +10,9 @@ local SEED = std.parseInt(std.extVar("ALLENNLP_SEED"));
   "dataset_reader": {
     "type": "jsonl_reader",
     "subtasks": [2],
+//    "oversampling_ratio": 1.5,
+//    "majority_description": 'term_def_only',
+//    "majority_description": 'term_def_pair',
     "token_indexers": {
       "tokens": {
         "type": "single_id",
@@ -21,8 +24,8 @@ local SEED = std.parseInt(std.extVar("ALLENNLP_SEED"));
       }
     },
   },
-  "train_data_path": "data/original-split-jsonl/train.jsonl",
-  "validation_data_path": "data/original-split-jsonl/dev.jsonl",
+  "train_data_path": "data/deft_split/jsonl/train.jsonl",
+  "validation_data_path": "data/deft_split/jsonl/dev.jsonl",
   "model": {
     "type": "simple_tagger",
     "text_field_embedder": {
