@@ -1,0 +1,14 @@
+{
+  "OVERSAMPLING_RATIO": {
+    "sampling strategy": "uniform",
+    "bounds": [1.0, 10.0]
+  },
+  "MAJORITY_DESCRIPTION": {
+    "sampling strategy": "choice",
+    "choices": ["term_def_only", "term_def_pair"]
+  },
+  "ALLENNLP_SEED": {
+    "sampling strategy": "integer",
+    "bounds": [0, 9999999]
+  }
+}
