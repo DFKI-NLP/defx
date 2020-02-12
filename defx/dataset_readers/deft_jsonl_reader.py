@@ -86,7 +86,7 @@ class DeftJsonlReader(DatasetReader):
                     ner_ids=ner_ids,
                     relation_root_idxs=relation_root_idxs
                 )
-                if file_path.__contains__('train.jsonl') and self._oversampling_ratio is not None:
+                if file_path.__str__().__contains__('train.jsonl') and self._oversampling_ratio is not None:
                     if self._is_majority_example(example_json):
                         yield instance
                     else:
