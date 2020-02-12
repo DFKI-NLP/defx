@@ -238,39 +238,52 @@ if len(results) > 1:
         summary['subtask1_recall_stdev'] = stdev(recall_values)
         f1_values = [r['subtask1']["1"]["f1"] for r in results]
         f1_mean = mean(f1_values)
-        f1_stdev = stdev(f1_values)
+        f1_std = stdev(f1_values)
         summary['subtask1_f1_mean'] = f1_mean
-        summary['subtask1_f1_stdev'] = f1_stdev
-        print(f'Subtask 1 score: {f1_mean * 100:.2f}+-{f1_stdev * 100:.2f} F1')
+        summary['subtask1_f1_stdev'] = f1_std
+        print(f'Subtask 1 score: {f1_mean * 100:.2f}+-{f1_std * 100:.2f} F1')
 
     if 2 in args.subtasks:
         precision_values = [r['subtask2']["macro avg"]["precision"] for r in results]
-        summary['subtask2_precision_mean'] = mean(precision_values)
-        summary['subtask2_precision_stdev'] = stdev(precision_values)
+        p_mean = mean(precision_values)
+        p_std = stdev(precision_values)
+        summary['subtask2_precision_mean'] = p_mean
+        summary['subtask2_precision_stdev'] = p_std
         recall_values = [r['subtask2']["macro avg"]["recall"] for r in results]
-        summary['subtask2_recall_mean'] = mean(recall_values)
-        summary['subtask2_recall_stdev'] = stdev(recall_values)
+        r_mean = mean(recall_values)
+        r_std = stdev(recall_values)
+        summary['subtask2_recall_mean'] = r_mean
+        summary['subtask2_recall_stdev'] = r_std
         f1_values = [r['subtask2']["macro avg"]["f1-score"] for r in results]
         f1_mean = mean(f1_values)
-        f1_stdev = stdev(f1_values)
+        f1_std = stdev(f1_values)
         summary['subtask2_f1_mean'] = f1_mean
-        summary['subtask2_f1_stdev'] = f1_stdev
-        print(f'Subtask 2 score: {f1_mean * 100:.2f}+-{f1_stdev * 100:.2f} F1')
+        summary['subtask2_f1_stdev'] = f1_std
+        print(f'Subtask 2 score')
+        print(f'  P: {p_mean * 100:.2f}+-{p_std * 100:.2f}')
+        print(f'  R: {r_mean * 100:.2f}+-{r_std * 100:.2f}')
+        print(f'  F: {f1_mean * 100:.2f}+-{f1_std * 100:.2f}')
 
     if 3 in args.subtasks:
         precision_values = [r['subtask3']["macro"]["p"] for r in results]
-        summary['subtask3_precision_mean'] = mean(precision_values)
-        summary['subtask3_precision_stdev'] = stdev(precision_values)
+        p_mean = mean(precision_values)
+        p_std = stdev(precision_values)
+        summary['subtask3_precision_mean'] = p_mean
+        summary['subtask3_precision_stdev'] = p_std
         recall_values = [r['subtask3']["macro"]["r"] for r in results]
-        summary['subtask3_recall_mean'] = mean(recall_values)
-        summary['subtask3_recall_stdev'] = stdev(recall_values)
+        r_mean = mean(recall_values)
+        r_std = stdev(recall_values)
+        summary['subtask3_recall_mean'] = r_mean
+        summary['subtask3_recall_stdev'] = r_std
         f1_values = [r['subtask3']["macro"]["f"] for r in results]
         f1_mean = mean(f1_values)
-        f1_stdev = stdev(f1_values)
+        f1_std = stdev(f1_values)
         summary['subtask3_f1_mean'] = f1_mean
-        summary['subtask3_f1_stdev'] = f1_stdev
-        print(f'Subtask 3 score: {f1_mean * 100:.2f}+-{f1_stdev * 100:.2f} F1')
+        summary['subtask3_f1_stdev'] = f1_std
+        print(f'Subtask 3 score')
+        print(f'  P: {p_mean * 100:.2f}+-{p_std * 100:.2f}')
+        print(f'  R: {r_mean * 100:.2f}+-{r_std * 100:.2f}')
+        print(f'  F: {f1_mean * 100:.2f}+-{f1_std * 100:.2f}')
 
-    pprint(summary)
     with Path(args.model_dir, 'summary.json').open('w') as f:
         json.dump(summary, f)
