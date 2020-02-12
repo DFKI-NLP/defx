@@ -52,8 +52,12 @@ def evaluate_subtask(subtask, eval_labels, gold_dir, pred_dir):
         if subtask == 1:
             report = task1_evaluate(y_gold, y_pred, eval_labels)
         elif subtask == 2:
+            y_pred = [y_label if y_label in eval_labels else 'O'
+                      for y_label in y_pred]
             report = task2_evaluate(y_gold, y_pred, eval_labels)
         elif subtask == 3:
+            y_pred = [y_label if y_label in eval_labels else '0'
+                      for y_label in y_pred]
             report = task3_evaluate(y_gold, y_pred, eval_labels)
         else:
             raise RuntimeError('Unknown subtask')
