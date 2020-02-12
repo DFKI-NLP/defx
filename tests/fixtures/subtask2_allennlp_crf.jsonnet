@@ -5,6 +5,7 @@
   "dataset_reader": {
     "type": "jsonl_reader",
     "subtasks": [2],
+    "read_spacy_pos_tags": false,
     "token_indexers": {
       "tokens": {
         "type": "single_id",

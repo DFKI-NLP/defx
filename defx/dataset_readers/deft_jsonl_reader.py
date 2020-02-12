@@ -29,6 +29,7 @@ class DeftJsonlReader(DatasetReader):
                  split_ner_labels: bool = False,
                  oversampling_ratio: float = None,
                  majority_description: str = None,
+                 read_spacy_pos_tags: bool = True,
                  token_indexers: Dict[str, TokenIndexer] = None):
         super().__init__(lazy)
         for subtask in subtasks:
@@ -43,6 +44,7 @@ class DeftJsonlReader(DatasetReader):
         self._split_ner_labels = split_ner_labels
         self._oversampling_ratio = oversampling_ratio
         self._majority_description = majority_description
+        self._read_spacy_pos_tags = read_spacy_pos_tags
 
         # "Subtask 2 only" dataset readers should use the labels namespace
         # for the sequence tags, but others should use 'tags'
@@ -64,8 +66,19 @@ class DeftJsonlReader(DatasetReader):
                     ner_ids.index(root) if root in ner_ids else -1
                     for root in relation_roots
                 ]
+                tokens = []
+                text_tokens = example_json['tokens']
+                for token_idx, text_token in enumerate(text_tokens):
+                    if self._read_spacy_pos_tags:
+                        spacy_pos = example_json['spacy_pos'][token_idx]
+                        spacy_tag = example_json['spacy_tag'][token_idx]
+                    else:
+                        spacy_pos = None
+                        spacy_tag = None
+                    token = Token(text=text_token, pos_=spacy_pos, tag_=spacy_tag)
+                    tokens.append(token)
                 instance = self.text_to_instance(
-                    tokens=[Token(t) for t in example_json['tokens']],
+                    tokens=tokens,
                     sentence_labels=example_json['sentence_labels'],
                     tags=example_json['tags'],
                     example_id=example_json['id'],

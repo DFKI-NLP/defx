@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, TextIO
 
+import spacy
+from spacy.tokens import Doc
 from tqdm import tqdm
 
 SENTS_PER_EXAMPLE = 3
@@ -39,15 +41,19 @@ def main():
         _convert_deft_folder(input_path, output_file_handler)
 
 
-def _convert_deft_folder(input_path: Path, output_file: TextIO) -> None:
+def _convert_deft_folder(input_path: Path, output_file: TextIO, with_spacy=True) -> None:
     """Convert all files in the given folder."""
+    if with_spacy:
+        spacy_pipeline = spacy.load('en_core_web_lg')
+    else:
+        spacy_pipeline = None
     for input_file in tqdm(input_path.iterdir()):
-        examples = _convert_deft_file(input_file)
+        examples = _convert_deft_file(input_file, spacy_pipeline=spacy_pipeline)
         for example in examples:
             output_file.write(json.dumps(example) + '\n')
 
 
-def _convert_deft_file(input_file: Path) -> List[Dict[str, Any]]:
+def _convert_deft_file(input_file: Path, spacy_pipeline=None) -> List[Dict[str, Any]]:
     """Converts a deft file into jsonl format and writes to the output file"""
     examples = []
     example_count = 0
@@ -61,14 +67,14 @@ def _convert_deft_file(input_file: Path) -> List[Dict[str, Any]]:
             if '\n' not in next_line:
                 break
 
-            example = _parse_example(file_handler)
+            example = _parse_example(file_handler, spacy_pipeline=spacy_pipeline)
             example['id'] = f'{input_file.name}##{example_count}'
             examples.append(example)
             example_count += 1
     return examples
 
 
-def _parse_example(file_handler: TextIO) -> Dict:
+def _parse_example(file_handler: TextIO, spacy_pipeline=None) -> Dict:
     """Parses an example and does some pre-processing"""
     sentences = _parse_example_sentences(file_handler)
     example = {'sentence_labels': []}
@@ -76,6 +82,11 @@ def _parse_example(file_handler: TextIO) -> Dict:
     # Flatten list fields into a single list
     for field in SEQUENCE_FIELDS:
         example[field] = [i for s in sentences for i in s[field]]
+
+    if spacy_pipeline is not None:
+        doc = _spacy_processing(example, spacy_pipeline)
+        example['spacy_pos'] = [t.pos_ for t in doc]
+        example['spacy_tag'] = [t.tag_ for t in doc]
 
     # Concatenate sentence labels with token spans
     token_count = 0
@@ -99,6 +110,19 @@ def _parse_example(file_handler: TextIO) -> Dict:
             example['relation_roots'][token_idx] = '-1'
 
     return example
+
+
+def _spacy_processing(example: Dict, spacy_pipeline) -> Doc:
+    # Determine if a character had a subsequent space by comparing its character end
+    # index against the character start index of the next token.
+    paired_char_offsets = zip(example['end_chars'][:-1],
+                              example['start_chars'][1:])
+    subsequent_spaces = [char_end != char_start
+                         for char_end, char_start in paired_char_offsets] + [False]
+    doc = Doc(spacy_pipeline.vocab,
+              words=example['tokens'],
+              spaces=subsequent_spaces)
+    return spacy_pipeline.tagger(doc)
 
 
 def _peek_line(file_handler) -> str:
