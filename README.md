@@ -7,6 +7,7 @@ DeftEval: Extracting term-definition pairs in free text
 Tested with **Python 3.7.4**:
 ```
 pip install -r requirements.txt
+python -m spacy download en_core_web_lg
 ```
 
 ### Clone the deft corpus
@@ -38,7 +39,7 @@ python scripts/evaluate.py data/deft_split/subtask1_raw/dev/ data/results/subtas
 
 ## Running a demo
 
-Install streamlit and spacy, and execute:
 ```
+pip install streamlit
 streamlit run streamlit_demo.py -- data/runs/joint_bert_classifier/model.tar.gz
 ```
