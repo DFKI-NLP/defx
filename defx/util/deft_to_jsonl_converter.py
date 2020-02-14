@@ -87,6 +87,8 @@ def _parse_example(file_handler: TextIO, spacy_pipeline=None) -> Dict:
         doc = _spacy_processing(example, spacy_pipeline)
         example['spacy_pos'] = [t.pos_ for t in doc]
         example['spacy_tag'] = [t.tag_ for t in doc]
+        example['spacy_dep_head'] = [t.head.i for t in doc]
+        example['spacy_dep_rel'] = [t.dep_ for t in doc]
 
     # Concatenate sentence labels with token spans
     token_count = 0
@@ -122,7 +124,9 @@ def _spacy_processing(example: Dict, spacy_pipeline) -> Doc:
     doc = Doc(spacy_pipeline.vocab,
               words=example['tokens'],
               spaces=subsequent_spaces)
-    return spacy_pipeline.tagger(doc)
+    spacy_pipeline.tagger(doc)
+    spacy_pipeline.parser(doc)
+    return doc
 
 
 def _peek_line(file_handler) -> str:
