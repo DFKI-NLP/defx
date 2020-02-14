@@ -1,12 +1,12 @@
 import json
 import math
 from random import random
-from typing import Dict, List, Iterable, Any
+from typing import Dict, List, Iterable, Any, Tuple
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data import DatasetReader, TokenIndexer, Instance, Token
 from allennlp.data.fields import SequenceLabelField, MetadataField, TextField, \
-    ListField, LabelField, IndexField
+    ListField, LabelField, IndexField, AdjacencyField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from overrides import overrides
 
@@ -30,6 +30,9 @@ class DeftJsonlReader(DatasetReader):
                  oversampling_ratio: float = None,
                  majority_description: str = None,
                  read_spacy_pos_tags: bool = True,
+                 read_spacy_dep_rels: bool = True,
+                 read_spacy_dep_heads: bool = False,
+                 add_dep_self_loops: bool = True,
                  token_indexers: Dict[str, TokenIndexer] = None):
         super().__init__(lazy)
         for subtask in subtasks:
@@ -45,6 +48,9 @@ class DeftJsonlReader(DatasetReader):
         self._oversampling_ratio = oversampling_ratio
         self._majority_description = majority_description
         self._read_spacy_pos_tags = read_spacy_pos_tags
+        self._read_spacy_dep_rels = read_spacy_dep_rels
+        self._read_spacy_dep_heads = read_spacy_dep_heads
+        self._add_dep_self_loops = add_dep_self_loops
 
         # "Subtask 2 only" dataset readers should use the labels namespace
         # for the sequence tags, but others should use 'tags'
@@ -75,8 +81,14 @@ class DeftJsonlReader(DatasetReader):
                     else:
                         spacy_pos = None
                         spacy_tag = None
-                    token = Token(text=text_token, pos_=spacy_pos, tag_=spacy_tag)
+                    if self._read_spacy_dep_rels:
+                        spacy_dep = example_json['spacy_dep_rel'][token_idx]
+                    else:
+                        spacy_dep = None
+                    token = Token(text=text_token, pos_=spacy_pos, tag_=spacy_tag, dep_=spacy_dep)
                     tokens.append(token)
+
+                dep_heads = example_json['spacy_dep_head'] if 'spacy_dep_head' in example_json else None
                 instance = self.text_to_instance(
                     tokens=tokens,
                     sentence_labels=example_json['sentence_labels'],
@@ -84,7 +96,8 @@ class DeftJsonlReader(DatasetReader):
                     example_id=example_json['id'],
                     relations=example_json['relations'],
                     ner_ids=ner_ids,
-                    relation_root_idxs=relation_root_idxs
+                    relation_root_idxs=relation_root_idxs,
+                    dep_heads=dep_heads,
                 )
                 if file_path.__str__().__contains__('train.jsonl') and self._oversampling_ratio is not None:
                     if self._is_majority_example(example_json):
@@ -103,7 +116,8 @@ class DeftJsonlReader(DatasetReader):
                          sentence_labels: List[Dict] = None,
                          relation_root_idxs: List[int] = None,
                          relations: List[str] = None,
-                         example_id: str = None) -> Instance:
+                         example_id: str = None,
+                         dep_heads: List[int] = None) -> Instance:
         # pylint: disable=arguments-differ,too-many-arguments
         assert len(tokens) > 0, 'Empty example encountered'
 
@@ -158,6 +172,11 @@ class DeftJsonlReader(DatasetReader):
                 sequence_field=text_field,
                 label_namespace='relation_labels'
             )
+
+        if self._read_spacy_dep_heads:
+            assert dep_heads is not None, 'Dependency head indexes are missing'
+            indices = self._parse_adjacency_indices(dep_heads, add_self_loops=self._add_dep_self_loops)
+            fields["adjacency"] = AdjacencyField(indices, sequence_field=text_field)
 
         return Instance(fields)
 
@@ -217,3 +236,15 @@ class DeftJsonlReader(DatasetReader):
             return len(sorted_start_tags) == 0 or sorted_start_tags == ['B-Definition', 'B-Term']
         else:
             raise RuntimeError('unknown description for the majority of the examples')
+
+    @staticmethod
+    def _parse_adjacency_indices(head_idxs: List[int],
+                                 add_self_loops: bool = False) -> List[Tuple[int, int]]:
+        indices = [(node_idx, head_idx)
+                   for node_idx, head_idx in enumerate(head_idxs)
+                   if node_idx != head_idx]
+        if add_self_loops:
+            indices.extend([(node_idx, node_idx)
+                            for node_idx in range(len(head_idxs))])
+        return indices
+
