@@ -11,7 +11,9 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
     @staticmethod
     def test_read_samples():
         """Tests parsing the samples file"""
-        reader = DeftJsonlReader(subtasks=[1, 2, 3], read_spacy_pos_tags=False)
+        reader = DeftJsonlReader(subtasks=[1, 2, 3],
+                                 read_spacy_pos_tags=False,
+                                 read_spacy_dep_rels=False)
         instances = ensure_list(reader._read(
             'tests/fixtures/jsonl_format_samples.jsonl'))
         assert len(instances) == 5
@@ -43,7 +45,9 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
     @staticmethod
     def test_text_to_test_instance():
         """Tests the creation of a single test instance without labels"""
-        reader = DeftJsonlReader(subtasks=[1, 2, 3], read_spacy_pos_tags=False)
+        reader = DeftJsonlReader(subtasks=[1, 2, 3],
+                                 read_spacy_pos_tags=False,
+                                 read_spacy_dep_rels=False)
         tokenized_text = [
             'Immunotherapy', 'is', 'the', 'treatment', 'of', 'disease',
             'by', 'activating', 'or', 'suppressing', 'the', 'immune',
@@ -65,7 +69,9 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
     @staticmethod
     def test_text_to_subtask1_instance():
         """Tests the creation of a single instance"""
-        reader = DeftJsonlReader(subtasks=[1], read_spacy_pos_tags=False)
+        reader = DeftJsonlReader(subtasks=[1],
+                                 read_spacy_pos_tags=False,
+                                 read_spacy_dep_rels=False)
         example_id = 'some_example_id'
         # token spans are not correct, but that should not matter
         sentence_labels = [
@@ -118,7 +124,9 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
     @staticmethod
     def test_text_to_subtask2_instance():
         """Tests the creation of a single instance"""
-        reader = DeftJsonlReader(subtasks=[2], read_spacy_pos_tags=False)
+        reader = DeftJsonlReader(subtasks=[2],
+                                 read_spacy_pos_tags=False,
+                                 read_spacy_dep_rels=False)
         example_id = 'some_example_id'
         # token spans are not correct, but that should not matter
         sentence_labels = [
@@ -165,7 +173,9 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
     @staticmethod
     def test_text_to_subtask3_training_instance():
         """Tests the creation of a training instance for subtask 3 only"""
-        reader = DeftJsonlReader(subtasks=[3], read_spacy_pos_tags=False)
+        reader = DeftJsonlReader(subtasks=[3],
+                                 read_spacy_pos_tags=False,
+                                 read_spacy_dep_rels=False)
         example_id = 'some_example_id'
         # token spans are not correct, but that should not matter
         sentence_labels = [
@@ -238,7 +248,9 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
     @staticmethod
     def test_text_to_subtask3_test_instance_with_gold_ner():
         """Tests the creation of a test instance for subtask 3 only"""
-        reader = DeftJsonlReader(subtasks=[3], read_spacy_pos_tags=False)
+        reader = DeftJsonlReader(subtasks=[3],
+                                 read_spacy_pos_tags=False,
+                                 read_spacy_dep_rels=False)
         tokenized_text = [
             'Immunotherapy', 'is', 'the', 'treatment', 'of', 'disease',
             'by', 'activating', 'or', 'suppressing', 'the', 'immune',
@@ -277,7 +289,9 @@ class DeftJsonlDatasetReaderTest(AllenNlpTestCase):
 
     @staticmethod
     def test_ner_tag_splitting():
-        reader = DeftJsonlReader(subtasks=[2], split_ner_labels=True, read_spacy_pos_tags=False)
+        reader = DeftJsonlReader(subtasks=[2], split_ner_labels=True,
+                                 read_spacy_pos_tags=False,
+                                 read_spacy_dep_rels=False)
         tags = [
             'B-Term', 'I-Term', 'O', 'B-Definition', 'I-Definition', 'B-Term', 'O',
             'B-Referential-Definition', 'I-Referential-Definition', 'O', 'B-Alias-Term', 'I-Alias-Term',

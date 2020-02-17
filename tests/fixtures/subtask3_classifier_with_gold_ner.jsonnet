@@ -7,6 +7,7 @@
     "type": "jsonl_reader",
     "subtasks": [3],
     "read_spacy_pos_tags": false,
+    "read_spacy_dep_rels": false,
     "token_indexers": {
       "tokens": {
         "type": "single_id",
