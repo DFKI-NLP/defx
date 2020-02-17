@@ -176,7 +176,7 @@ class DeftJsonlReader(DatasetReader):
         if self._read_spacy_dep_heads:
             assert dep_heads is not None, 'Dependency head indexes are missing'
             indices = self._parse_adjacency_indices(dep_heads, add_self_loops=self._add_dep_self_loops)
-            fields["adjacency"] = AdjacencyField(indices, sequence_field=text_field)
+            fields["adjacency"] = AdjacencyField(indices, sequence_field=text_field, padding_value=0)
 
         return Instance(fields)
 
