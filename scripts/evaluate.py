@@ -176,6 +176,11 @@ assert config_path.exists() and config_path.is_file(), 'Config not found'
 with config_path.open() as cfg_file:
     config = safe_load(cfg_file)
 
+
+def is_challenge_dataset(split: str):
+    return split.startswith('subtask')
+
+
 results = []
 for cwd, _, curr_files in os.walk(args.model_dir):
     if 'model.tar.gz' in curr_files:
@@ -193,6 +198,10 @@ for cwd, _, curr_files in os.walk(args.model_dir):
         )
         if args.force_pred or pred_writer.missing_predictions():
             pred_writer.run()  # Generate predictions and bundle a submission
+
+        if is_challenge_dataset(split):  # Skip evaluation for submissions
+            print('Skipping evaluation for challenge test set')
+            continue
 
         result = {}
 
@@ -236,7 +245,7 @@ for cwd, _, curr_files in os.walk(args.model_dir):
             json.dump(result, f)
         results.append(result)
 
-assert len(results) > 0, 'Missing results'
+assert len(results) > 0 or is_challenge_dataset(split), 'Missing results'
 if len(results) > 1:
     # Compute summaries over multiple models
 
