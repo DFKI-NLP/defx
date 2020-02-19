@@ -27,14 +27,9 @@ bash scripts/preprocess.sh
 ALLENNLP_SEED=0 ALLENNLP_DEVICE=-1 allennlp train configs/subtask1_basic_debug.jsonnet --include-package defx -s data/runs/subtask1_example
 ```
 
-### Generate predictions
+### Evaluate the model and generate a submission
 ```
-python scripts/bundle_submission.py data/deft_split/subtask1_raw/test/ data/results/subtask1_example/ --model-archive data/runs/subtask1_example/model.tar.gz
-```
-
-### Call the official evaluation metrics
-```
-python scripts/evaluate.py data/deft_split/subtask1_raw/dev/ data/results/subtask1_example/
+python scripts/evaluate.py --cuda-device <device-id> <model-dir> --subtasks <1-3> --split <dev/test>
 ```
 
 ## Running a demo
