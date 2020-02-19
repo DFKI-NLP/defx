@@ -32,5 +32,7 @@ echo "Converting to jsonl format..."
 python defx/util/deft_to_jsonl_converter.py data/deft_split/raw/train/ data/deft_split/jsonl/train.jsonl
 python defx/util/deft_to_jsonl_converter.py data/deft_split/raw/dev/ data/deft_split/jsonl/dev.jsonl
 python defx/util/deft_to_jsonl_converter.py data/deft_split/raw/test/ data/deft_split/jsonl/test.jsonl
+python defx/util/deft_to_jsonl_converter.py data/deft_split/raw/test/ data/deft_split/jsonl/test.jsonl
+python defx/util/deft_to_jsonl_converter.py data/deft_corpus/data/test_files/subtask_2 data/deft_split/jsonl/subtask_2.jsonl
 
 echo "Done."

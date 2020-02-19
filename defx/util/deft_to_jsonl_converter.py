@@ -77,11 +77,12 @@ def _convert_deft_file(input_file: Path, spacy_pipeline=None) -> List[Dict[str, 
 def _parse_example(file_handler: TextIO, spacy_pipeline=None) -> Dict:
     """Parses an example and does some pre-processing"""
     sentences = _parse_example_sentences(file_handler)
-    example = {'sentence_labels': []}
+    example = {}
 
     # Flatten list fields into a single list
     for field in SEQUENCE_FIELDS:
-        example[field] = [i for s in sentences for i in s[field]]
+        if field in sentences[0]:
+            example[field] = [i for s in sentences for i in s[field]]
 
     if spacy_pipeline is not None:
         doc = _spacy_processing(example, spacy_pipeline)
@@ -91,25 +92,29 @@ def _parse_example(file_handler: TextIO, spacy_pipeline=None) -> Dict:
         example['spacy_dep_rel'] = [t.dep_ for t in doc]
 
     # Concatenate sentence labels with token spans
-    token_count = 0
-    for sentence in sentences:
-        sentence_length = len(sentence['tokens'])
-        start_token_idx = token_count
-        end_token_idx = start_token_idx + sentence_length
-        token_count += sentence_length
-        example['sentence_labels'].append({
-            'label': sentence['sentence_label'],
-            'start_token_idx': start_token_idx,
-            'end_token_idx': end_token_idx
-        })
+    if 'sentence_label' in sentences[0]:
+        sentence_labels = []
+        token_count = 0
+        for sentence in sentences:
+            sentence_length = len(sentence['tokens'])
+            start_token_idx = token_count
+            end_token_idx = start_token_idx + sentence_length
+            token_count += sentence_length
+            sentence_labels.append({
+                'label': sentence['sentence_label'],
+                'start_token_idx': start_token_idx,
+                'end_token_idx': end_token_idx
+            })
+        example['sentence_labels'] = sentence_labels
 
     # Remove relation annotations without head nodes
-    existing_head_ids = example['ner_ids']
-    for token_idx in range(len(example['tokens'])):
-        head_id = example['relation_roots'][token_idx]
-        if head_id not in existing_head_ids:
-            example['relations'][token_idx] = '0'
-            example['relation_roots'][token_idx] = '-1'
+    if 'relations' in example:
+        existing_head_ids = example['ner_ids']
+        for token_idx in range(len(example['tokens'])):
+            head_id = example['relation_roots'][token_idx]
+            if head_id not in existing_head_ids:
+                example['relations'][token_idx] = '0'
+                example['relation_roots'][token_idx] = '-1'
 
     return example
 
@@ -163,15 +168,15 @@ def _parse_example_sentences(file_handler: TextIO) -> Dict:
 def _parse_sentence(input_file: TextIO) -> Dict[str, Any]:
     """Parses all lines of the current sentence into a deft sentence object"""
     sentence = {
-        'sentence_label': 'NoDef',
         'tokens': [],
         'start_chars': [],
         'end_chars': [],
-        'tags': [],
-        'ner_ids': [],
-        'relation_roots': [],
-        'relations': []
     }
+    sentence_label = None
+    tags = []
+    ner_ids = []
+    relation_roots = []
+    relations = []
     line = input_file.readline()
     while line != '':
         if line.strip() == '':
@@ -181,18 +186,34 @@ def _parse_sentence(input_file: TextIO) -> Dict[str, Any]:
             break  # End of sentence, stop parsing.
 
         split_line = [l.strip() for l in line.strip().split('\t')]
-        assert len(split_line) == 8, 'invalid line format: {}'.format(line)
+        # assert len(split_line) == 8, 'invalid line format: {}'.format(line)
+        assert len(split_line) >= 4, 'invalid line format: {}'.format(line)
         sentence['tokens'].append(split_line[0])
         sentence['start_chars'].append(split_line[2])
         sentence['end_chars'].append(split_line[3])
-        tag = split_line[4]
-        sentence['tags'].append(tag)
-        if tag[2:] == 'Definition':
-            sentence['sentence_label'] = 'HasDef'
-        sentence['ner_ids'].append(split_line[5])
-        sentence['relation_roots'].append(split_line[6])
-        sentence['relations'].append(split_line[7])
+        if len(split_line) > 4:
+            tag = split_line[4]
+            tags.append(tag)
+            if tag[2:] == 'Definition':
+                sentence_label = 'HasDef'
+            elif sentence_label is None:
+                sentence_label = 'NoDef'
+        if len(split_line) > 5:
+            ner_ids.append(split_line[5])
+            relation_roots.append(split_line[6])
+            relations.append(split_line[7])
         line = input_file.readline()
+
+    if sentence_label is not None:
+        sentence['sentence_label'] = sentence_label
+    if len(tags) > 0:
+        sentence['tags'] = tags
+    if len(ner_ids) > 0:
+        sentence['ner_ids'] = ner_ids
+    if len(relation_roots) > 0:
+        sentence['relation_roots'] = relation_roots
+    if len(relations) > 0:
+        sentence['relations'] = relations
 
     return sentence
 
