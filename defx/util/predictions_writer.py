@@ -18,7 +18,8 @@ class PredictionsWriter:
                  predictor: str,
                  subtasks: List[int],
                  batch_size: int = 16,
-                 cuda_device: int = -1):
+                 cuda_device: int = -1,
+                 task_config: Dict = None):
         self._predictor = Predictor.from_path(model_archive,
                                               predictor,
                                               cuda_device=cuda_device)
@@ -26,6 +27,7 @@ class PredictionsWriter:
         self._output_dir = output_dir
         self._subtasks = subtasks
         self._batch_size = batch_size
+        self._task_config = task_config
 
     def missing_predictions(self):
         for subtask in self._subtasks:
@@ -131,6 +133,9 @@ class PredictionsWriter:
                 instance, results = prediction
                 source_file = self._get_instance_source_file(instance)
                 for word, tag in zip(results['words'], results['tags']):
+                    if self._task_config is not None:
+                        eval_labels = self._task_config['task_2']['eval_labels']
+                        tag = 'O' if tag not in eval_labels else tag
                     writer.writerow([word, source_file, 666, 666, tag])
                 writer.writerow([])
 

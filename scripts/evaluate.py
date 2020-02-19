@@ -171,6 +171,11 @@ split = args.split
 model_input = Path(JSONL_BASE_PATH, f'{split}.jsonl')
 gold_dir = Path(RAW_BASE_PATH, split)
 
+config_path = Path('data/deft_corpus/evaluation/program/configs/eval_test.yaml')
+assert config_path.exists() and config_path.is_file(), 'Config not found'
+with config_path.open() as cfg_file:
+    config = safe_load(cfg_file)
+
 results = []
 for cwd, _, curr_files in os.walk(args.model_dir):
     if 'model.tar.gz' in curr_files:
@@ -183,15 +188,11 @@ for cwd, _, curr_files in os.walk(args.model_dir):
             model_archive=model_archive,
             predictor=args.predictor,
             subtasks=args.subtasks,
-            cuda_device=args.cuda_device
+            cuda_device=args.cuda_device,
+            task_config=config
         )
         if args.force_pred or pred_writer.missing_predictions():
             pred_writer.run()  # Generate predictions and bundle a submission
-
-        config_path = Path('data/deft_corpus/evaluation/program/configs/eval_test.yaml')
-        assert config_path.exists() and config_path.is_file(), 'Config not found'
-        with config_path.open() as cfg_file:
-            config = safe_load(cfg_file)
 
         result = {}
 
