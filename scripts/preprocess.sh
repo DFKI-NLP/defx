@@ -17,8 +17,10 @@ echo "Splitting raw data..."
 cp data/deft_corpus/data/deft_files/dev/*.deft data/deft_split/raw/test/
 cp data/deft_corpus/data/deft_files/train/*.deft data/deft_split/raw/train_dev/
 cp data/deft_corpus/data/deft_files/train/*.deft data/deft_split/raw/train/
-# Move n random files from train to dev
-ls data/deft_split/raw/train/*.deft | shuf -n 8 | while read fn; do mv $fn data/deft_split/raw/dev/; done
+# Previously: Move n random files from train to dev
+#ls data/deft_split/raw/train/*.deft | shuf -n 8 | while read fn; do mv $fn data/deft_split/raw/dev/; done
+# Now: Move the files of the predefined dev set
+for fn in `cat scripts/dev_split_files.txt`; do mv data/deft_split/raw/train/$fn data/deft_split/raw/dev/; done
 
 echo "Converting to subtask 1 format..."
 python data/deft_corpus/task1_converter.py data/deft_split/raw/train_dev/ data/deft_split/subtask1_raw/train_dev/

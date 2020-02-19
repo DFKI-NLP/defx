@@ -1,0 +1,8 @@
+t1_biology_1_505.deft
+t1_biology_2_404.deft
+t2_history_1_101.deft
+t3_physics_2_101.deft
+t5_economic_1_303.deft
+t6_sociology_1_0.deft
+t7_government_0_101.deft
+t7_government_2_101.deft
