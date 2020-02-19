@@ -66,12 +66,7 @@ class DeftJsonlReader(DatasetReader):
                 if self._sample_limit and idx >= self._sample_limit:
                     break
                 example_json = json.loads(line.strip())
-                ner_ids = example_json['ner_ids']
-                relation_roots = example_json['relation_roots']
-                relation_root_idxs = [
-                    ner_ids.index(root) if root in ner_ids else -1
-                    for root in relation_roots
-                ]
+
                 tokens = []
                 text_tokens = example_json['tokens']
                 for token_idx, text_token in enumerate(text_tokens):
@@ -89,12 +84,33 @@ class DeftJsonlReader(DatasetReader):
                     tokens.append(token)
 
                 dep_heads = example_json['spacy_dep_head'] if 'spacy_dep_head' in example_json else None
+
+                # Meta information
+                example_id = example_json['id'] if 'id' in example_json else None
+
+                # Subtask 1 labels
+                sentence_labels = example_json['sentence_labels'] if 'sentence_labels' in example_json else None
+
+                # Subtask 2 labels
+                tags = example_json['tags'] if 'tags' in example_json else None
+
+                # Subtask 3 labels
+                ner_ids = example_json['ner_ids'] if 'ner_ids' in example_json else None
+                relations = example_json['relations'] if 'relations' in example_json else None
+                if 'relation_roots' in example_json:
+                    relation_root_idxs = [
+                        ner_ids.index(root) if root in ner_ids else -1
+                        for root in example_json['relation_roots']
+                    ]
+                else:
+                    relation_root_idxs = None
+
                 instance = self.text_to_instance(
                     tokens=tokens,
-                    sentence_labels=example_json['sentence_labels'],
-                    tags=example_json['tags'],
-                    example_id=example_json['id'],
-                    relations=example_json['relations'],
+                    sentence_labels=sentence_labels,
+                    tags=tags,
+                    example_id=example_id,
+                    relations=relations,
                     ner_ids=ner_ids,
                     relation_root_idxs=relation_root_idxs,
                     dep_heads=dep_heads,
@@ -124,7 +140,7 @@ class DeftJsonlReader(DatasetReader):
         text_field = TextField(tokens, token_indexers=self._token_indexers)
 
         metadata = {"words": [t.text for t in tokens]}
-        if example_id:
+        if example_id is not None:
             metadata["example_id"] = example_id
         if ner_ids and 3 in self._subtasks:
             metadata['ner_ids'] = ner_ids
