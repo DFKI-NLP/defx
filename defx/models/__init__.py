@@ -3,3 +3,4 @@ from defx.models.subtask3_classifier_with_gold_ner import Subtask3ClassifierWith
 from defx.models.relation_scorer import RelationScorer
 from defx.models.joint_classifier import JointClassifier
 from defx.models.subtask2_split_simple_tagger import Subtask2SplitSimpleTagger
+from defx.models.syntactic_simple_tagger import SyntacticSimpleTagger
