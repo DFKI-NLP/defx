@@ -125,8 +125,8 @@ class PredictionsWriter:
 
     def _write_subtask2_output_file(self, output_file, predictions):
         with output_file.open('w') as f:
-            writer = csv.writer(f, delimiter='\t', quotechar='"',
-                                quoting=csv.QUOTE_ALL)
+            writer = csv.writer(f, delimiter='\t', quotechar=None,
+                                quoting=csv.QUOTE_NONE)
             for prediction in predictions:
                 instance, results = prediction
                 source_file = self._get_instance_source_file(instance)

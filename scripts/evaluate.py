@@ -19,6 +19,7 @@ from evaluation_sub1 import get_gold_and_pred_labels as task1_get_labels
 from evaluation_sub1 import evaluate as task1_evaluate
 from evaluation_sub2 import evaluate as task2_evaluate
 from evaluation_sub2 import validate_data, get_label
+from evaluation_sub2 import validate_columns, validate_length
 from evaluation_sub3 import get_gold_and_pred_relations as task3_get_labels
 from evaluation_sub3 import evaluate as task3_evaluate
 from evaluation_sub3 import has_relation, get_relation, get_relation_from, get_relation_to
@@ -75,17 +76,28 @@ def task2_get_labels(gold_fname, pred_fname):
         y_pred: list of labels (strings)
     """
     with gold_fname.open() as gold_source:
-        gold_reader = csv.reader(gold_source, delimiter="\t", quoting=csv.QUOTE_NONE)
+        gold_reader = csv.reader(gold_source, delimiter="\t")
         gold_rows = [[col.strip() for col in row[:5]] for row in gold_reader if row]
 
     with pred_fname.open() as pred_source:
         pred_reader = csv.reader(pred_source, delimiter="\t")
         pred_rows = [row for row in pred_reader if row]
 
-    validate_data(gold_rows, pred_rows)
+    validate_task2_data(gold_rows, pred_rows)
     y_gold = [get_label(row) for row in gold_rows]
     y_pred = [get_label(row) for row in pred_rows]
     return y_gold, y_pred
+
+
+def validate_task2_data(gold_rows, pred_rows):
+    """Make sure the data is OK
+    Inputs:
+        gold_rows: list of lists of strings
+        pred_rows: list of lists of strings
+    """
+    validate_length(gold_rows, pred_rows)
+    validate_columns(gold_rows, pred_rows)
+    # validate_tokens(gold_rows, pred_rows)  # Do not validate the tokens since the gold data is incorrect
 
 
 def task3_get_labels(gold_fname, pred_fname):
