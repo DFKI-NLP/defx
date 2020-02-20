@@ -45,7 +45,7 @@ local encoder_hidden_dim = 50;
       "hidden_size": 50,
       "label_namespace": "relation_labels",
       "negative_label": "0",
-      "evaluated_labels": ['Direct-Defines', 'Indirect-Defines', 'Refers-To', 'AKA', 'Qualifies'],
+      "evaluated_labels": ['Direct-Defines', 'Indirect-Defines', 'AKA', 'Refers-To', 'Supplements'],
     }
   },
   "iterator": {
