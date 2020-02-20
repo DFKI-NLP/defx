@@ -10,6 +10,8 @@ from allennlp.data.fields import SequenceLabelField, MetadataField, TextField, \
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from overrides import overrides
 
+from defx import EVALUATED_SUBTASK2_LABELS, EVALUATED_SUBTASK3_LABELS
+
 
 @DatasetReader.register('jsonl_reader')
 class DeftJsonlReader(DatasetReader):
@@ -33,6 +35,8 @@ class DeftJsonlReader(DatasetReader):
                  read_spacy_dep_rels: bool = True,
                  read_spacy_dep_heads: bool = False,
                  add_dep_self_loops: bool = True,
+                 only_evaluated_subtask2_labels: bool = False,
+                 only_evaluated_subtask3_labels: bool = False,
                  token_indexers: Dict[str, TokenIndexer] = None):
         super().__init__(lazy)
         for subtask in subtasks:
@@ -51,6 +55,8 @@ class DeftJsonlReader(DatasetReader):
         self._read_spacy_dep_rels = read_spacy_dep_rels
         self._read_spacy_dep_heads = read_spacy_dep_heads
         self._add_dep_self_loops = add_dep_self_loops
+        self._only_evaluated_subtask2_labels = only_evaluated_subtask2_labels
+        self._only_evaluated_subtask3_labels = only_evaluated_subtask3_labels
 
         # "Subtask 2 only" dataset readers should use the labels namespace
         # for the sequence tags, but others should use 'tags'
@@ -158,6 +164,10 @@ class DeftJsonlReader(DatasetReader):
                  for label_dict in sentence_labels])
 
         if tags and (2 in self._subtasks or self._subtasks == [3]):
+            if self._only_evaluated_subtask2_labels:
+                tags = [tag if len(tag) > 2 and tag[2:] in EVALUATED_SUBTASK2_LABELS else 'O'
+                        for tag in tags]
+
             if self._split_ner_labels:
                 coarse_tags, modifier_tags = self._split_tags(tags)
                 coarse_tags_field = SequenceLabelField(
@@ -178,11 +188,21 @@ class DeftJsonlReader(DatasetReader):
                 fields['tags'] = tags_field
 
         if relation_root_idxs and 3 in self._subtasks:
+            if self._only_evaluated_subtask3_labels:
+                relation_root_idxs = [
+                    root_idx if relations[idx] in EVALUATED_SUBTASK3_LABELS else 0
+                    for idx, root_idx in enumerate(relation_root_idxs)
+                ]
             root_idxs_field = ListField([IndexField(root_idx, text_field)
                                          for root_idx in relation_root_idxs])
             fields['relation_root_idxs'] = root_idxs_field
 
         if relations and 3 in self._subtasks:
+            if self._only_evaluated_subtask3_labels:
+                relations = [
+                    relation if relation in EVALUATED_SUBTASK3_LABELS else '0'
+                    for relation in relations
+                ]
             fields['relations'] = SequenceLabelField(
                 labels=relations,
                 sequence_field=text_field,
