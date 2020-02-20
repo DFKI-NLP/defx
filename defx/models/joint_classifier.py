@@ -6,7 +6,7 @@ from allennlp.models import Model
 from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder, TokenEmbedder, TimeDistributed
 from allennlp.modules.conditional_random_field import allowed_transitions, ConditionalRandomField
 from allennlp.nn import RegularizerApplicator, InitializerApplicator
-from allennlp.nn.util import get_text_field_mask
+from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.training.metrics import CategoricalAccuracy, SpanBasedF1Measure
 from overrides import overrides
 from torch.nn import Linear
@@ -49,6 +49,10 @@ class JointClassifier(Model):
                  ner_tag_namespace: str = 'tags',
                  evaluated_ner_labels: List[str] = None,
                  re_loss_weight: float = 1.0,
+                 use_aux_ner_labels: bool = False,
+                 aux_coarse_namespace: str = 'coarse_tags',
+                 aux_modifier_namespace: str = 'modifier_tags',
+                 aux_loss_weight: float = 1.0,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab=vocab, regularizer=regularizer)
@@ -63,6 +67,21 @@ class JointClassifier(Model):
         num_ner_tags = self.vocab.get_vocab_size(ner_tag_namespace)
         self.tag_projection_layer = TimeDistributed(Linear(ner_input_dim,
                                                            num_ner_tags))
+
+        self._use_aux_ner_labels = use_aux_ner_labels
+        if self._use_aux_ner_labels:
+            self._coarse_tag_namespace = aux_coarse_namespace
+            self._num_coarse_tags = self.vocab.get_vocab_size(self._coarse_tag_namespace)
+            self._coarse_projection_layer = TimeDistributed(Linear(ner_input_dim,
+                                                                   self._num_coarse_tags))
+            self._modifier_tag_namespace = aux_modifier_namespace
+            self._num_modifier_tags = self.vocab.get_vocab_size(self._modifier_tag_namespace)
+            self._modifier_projection_layer = TimeDistributed(Linear(ner_input_dim,
+                                                                     self._num_modifier_tags))
+            self._coarse_acc = CategoricalAccuracy()
+            self._modifier_acc = CategoricalAccuracy()
+            self._aux_loss_weight = aux_loss_weight
+
         self.ner_accuracy = CategoricalAccuracy()
         if evaluated_ner_labels is None:
             ignored_classes = None
@@ -102,6 +121,8 @@ class JointClassifier(Model):
                 tags: torch.LongTensor = None,
                 relation_root_idxs: torch.LongTensor = None,
                 relations: torch.LongTensor = None,
+                coarse_tags: torch.LongTensor = None,
+                modifier_tags: torch.LongTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ,no-member
         """
@@ -138,6 +159,7 @@ class JointClassifier(Model):
             A scalar loss to be optimised.
         """
         embedded_text_input = self.text_field_embedder(tokens)
+        batch_size, sequence_length, _ = embedded_text_input.size()
         mask = get_text_field_mask(tokens)
 
         # Shape: batch x seq_len x emb_dim
@@ -161,6 +183,10 @@ class JointClassifier(Model):
             "mask": mask,
             "tags": predicted_ner_tags
         }
+
+        if self._use_aux_ner_labels:
+            coarse_logits = self._coarse_projection_layer(encoded_text)
+            modifier_logits = self._modifier_projection_layer(encoded_text)
 
         embedded_tags = self.ner_tag_embedder(predicted_ner_tags_tensor)
         encoded_sequence = torch.cat([encoded_text, embedded_tags], dim=2)
@@ -194,6 +220,14 @@ class JointClassifier(Model):
 
             output_dict['loss'] = output_dict['ner_loss'] + self._re_loss_weight * re_output['loss']
 
+            if self._use_aux_ner_labels:
+                assert coarse_tags is not None and modifier_tags is not None, 'Auxiliary losses require auxiliary input'
+                self._coarse_acc(coarse_logits, coarse_tags, mask.float())
+                self._modifier_acc(modifier_logits, modifier_tags, mask.float())
+                coarse_loss = sequence_cross_entropy_with_logits(coarse_logits, coarse_tags, mask)
+                modifier_loss = sequence_cross_entropy_with_logits(modifier_logits, modifier_tags, mask)
+                output_dict['loss'] += self._aux_loss_weight * (coarse_loss + modifier_loss)
+
         # Attach metadata
         if metadata is not None:
             for key in metadata[0]:
@@ -222,5 +256,7 @@ class JointClassifier(Model):
             'ner_f1': self.ner_f1.get_metric(reset=reset)['f1-measure-overall'],
             're_acc': re_metrics['re_acc'],
             're_f1': re_metrics['re_f1'],
+            'coarse_acc': self._coarse_acc.get_metric(reset=reset),
+            'modifier_acc': self._modifier_acc.get_metric(reset=reset),
         }
 

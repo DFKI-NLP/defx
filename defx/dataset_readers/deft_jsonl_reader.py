@@ -29,6 +29,7 @@ class DeftJsonlReader(DatasetReader):
                  lazy: bool = False,
                  sample_limit: int = None,
                  split_ner_labels: bool = False,
+                 aux_ner_labels: bool = False,
                  oversampling_ratio: float = None,
                  majority_description: str = None,
                  read_spacy_pos_tags: bool = True,
@@ -49,6 +50,7 @@ class DeftJsonlReader(DatasetReader):
         self._subtasks = subtasks
         self._sample_limit = sample_limit
         self._split_ner_labels = split_ner_labels
+        self._aux_ner_labels = aux_ner_labels
         self._oversampling_ratio = oversampling_ratio
         self._majority_description = majority_description
         self._read_spacy_pos_tags = read_spacy_pos_tags
@@ -168,8 +170,9 @@ class DeftJsonlReader(DatasetReader):
                 tags = [tag if len(tag) > 2 and tag[2:] in EVALUATED_SUBTASK2_LABELS else 'O'
                         for tag in tags]
 
-            if self._split_ner_labels:
-                coarse_tags, modifier_tags = self._split_tags(tags)
+            if self._split_ner_labels or self._aux_ner_labels:
+                assert not (self._split_ner_labels and self._aux_ner_labels), 'Can not be used together'
+                coarse_tags, modifier_tags = self._split_tags(tags, use_bio=self._split_ner_labels)
                 coarse_tags_field = SequenceLabelField(
                     labels=coarse_tags,
                     sequence_field=text_field,
@@ -180,7 +183,8 @@ class DeftJsonlReader(DatasetReader):
                     sequence_field=text_field,
                     label_namespace='modifier_tags')
                 fields['modifier_tags'] = modifier_tags_field
-            else:
+
+            if not self._split_ner_labels:
                 tags_field = SequenceLabelField(
                     labels=tags,
                     sequence_field=text_field,
@@ -216,7 +220,7 @@ class DeftJsonlReader(DatasetReader):
 
         return Instance(fields)
 
-    def _split_tags(self, tags: List[str]) -> (List[str], List[str]):
+    def _split_tags(self, tags: List[str], use_bio=True) -> (List[str], List[str]):
         coarse_tags = []
         modifier_tags = []
         for tag in tags:
@@ -244,13 +248,19 @@ class DeftJsonlReader(DatasetReader):
                     raise RuntimeError(f'Unexpected ner tag encountered: {tag}')
 
                 assert coarse_tag in ['Term', 'Definition', 'Qualifier'], f'Unknown coarse tag: {coarse_tag}'
-                coarse_tags.append(bio_tag + '-' + coarse_tag)
+                if use_bio:
+                    coarse_tags.append(bio_tag + '-' + coarse_tag)
+                else:
+                    coarse_tags.append(coarse_tag)
 
                 if modifier_tag is None:
                     modifier_tags.append('O')
                 else:
                     assert modifier_tag in ['Alias', 'Ordered', 'Referential', 'Secondary', 'frag'], f'Unknown modifier tag: {modifier_tag}'
-                    modifier_tags.append(bio_tag + '-' + modifier_tag)
+                    if use_bio:
+                        modifier_tags.append(bio_tag + '-' + modifier_tag)
+                    else:
+                        modifier_tags.append(modifier_tag)
         return coarse_tags, modifier_tags
 
     def _get_num_samples(self) -> int:
