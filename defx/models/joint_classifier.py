@@ -251,12 +251,14 @@ class JointClassifier(Model):
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         re_metrics = self.relation_scorer.get_metrics(reset=reset)
-        return {
+        joint_metrics = {
             'ner_acc': self.ner_accuracy.get_metric(reset=reset),
             'ner_f1': self.ner_f1.get_metric(reset=reset)['f1-measure-overall'],
             're_acc': re_metrics['re_acc'],
             're_f1': re_metrics['re_f1'],
-            'coarse_acc': self._coarse_acc.get_metric(reset=reset),
-            'modifier_acc': self._modifier_acc.get_metric(reset=reset),
         }
+        if self._use_aux_ner_labels:
+            joint_metrics['coarse_acc'] = self._coarse_acc.get_metric(reset=reset)
+            joint_metrics['modifier_acc'] = self._modifier_acc.get_metric(reset=reset)
+        return joint_metrics
 
