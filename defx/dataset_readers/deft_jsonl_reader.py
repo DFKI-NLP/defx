@@ -3,10 +3,11 @@ import math
 from random import random
 from typing import Dict, List, Iterable, Any, Tuple
 
+import numpy as np
 from allennlp.common.file_utils import cached_path
 from allennlp.data import DatasetReader, TokenIndexer, Instance, Token
 from allennlp.data.fields import SequenceLabelField, MetadataField, TextField, \
-    ListField, LabelField, IndexField, AdjacencyField
+    ListField, LabelField, IndexField, AdjacencyField, ArrayField, SequenceField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from overrides import overrides
 
@@ -35,6 +36,8 @@ class DeftJsonlReader(DatasetReader):
                  read_spacy_pos_tags: bool = True,
                  read_spacy_dep_rels: bool = True,
                  read_spacy_dep_heads: bool = False,
+                 read_binary_coref: bool = False,
+                 read_embedded_coref: bool = False,
                  add_dep_self_loops: bool = True,
                  only_evaluated_subtask2_labels: bool = False,
                  only_evaluated_subtask3_labels: bool = False,
@@ -59,6 +62,8 @@ class DeftJsonlReader(DatasetReader):
         self._add_dep_self_loops = add_dep_self_loops
         self._only_evaluated_subtask2_labels = only_evaluated_subtask2_labels
         self._only_evaluated_subtask3_labels = only_evaluated_subtask3_labels
+        self._read_binary_coref = read_binary_coref
+        self._read_embedded_coref = read_embedded_coref
 
         # "Subtask 2 only" dataset readers should use the labels namespace
         # for the sequence tags, but others should use 'tags'
@@ -113,6 +118,22 @@ class DeftJsonlReader(DatasetReader):
                 else:
                     relation_root_idxs = None
 
+                if self._read_binary_coref or self._read_embedded_coref:
+                    assert 'coref_clusters' in example_json, 'coref annotations are missing'
+                    is_in_coref = [self._is_in_coref_cluster(idx, example_json['coref_clusters'])
+                                    for idx in range(len(tokens))]
+                    if self._read_binary_coref:
+                        binary_coref = [float(val) for val in is_in_coref]
+                    else:
+                        binary_coref = None
+                    if self._read_embedded_coref:
+                        embedded_coref = [int(val) for val in is_in_coref]
+                    else:
+                        embedded_coref = [int(val) for val in is_in_coref]
+                else:
+                    binary_coref = None
+                    embedded_coref = None
+
                 instance = self.text_to_instance(
                     tokens=tokens,
                     sentence_labels=sentence_labels,
@@ -122,6 +143,8 @@ class DeftJsonlReader(DatasetReader):
                     ner_ids=ner_ids,
                     relation_root_idxs=relation_root_idxs,
                     dep_heads=dep_heads,
+                    binary_coref=binary_coref,
+                    embedded_coref=embedded_coref,
                 )
                 if file_path.__str__().__contains__('train.jsonl') and self._oversampling_ratio is not None:
                     if self._is_majority_example(example_json):
@@ -141,7 +164,9 @@ class DeftJsonlReader(DatasetReader):
                          relation_root_idxs: List[int] = None,
                          relations: List[str] = None,
                          example_id: str = None,
-                         dep_heads: List[int] = None) -> Instance:
+                         dep_heads: List[int] = None,
+                         binary_coref: List[float] = None,
+                         embedded_coref: List[int] = None,) -> Instance:
         # pylint: disable=arguments-differ,too-many-arguments
         assert len(tokens) > 0, 'Empty example encountered'
 
@@ -218,6 +243,14 @@ class DeftJsonlReader(DatasetReader):
             indices = self._parse_adjacency_indices(dep_heads, add_self_loops=self._add_dep_self_loops)
             fields["adjacency"] = AdjacencyField(indices, sequence_field=text_field, padding_value=0)
 
+        if self._read_binary_coref:
+            assert binary_coref, 'Binary coref missing'
+            fields["binary_coref"] = ArrayField(np.array(binary_coref), padding_value=-1.0)
+
+        if self._read_embedded_coref:
+            assert embedded_coref, 'Embedding value for coref missing'
+            fields["embedded_coref"] = ArrayField(np.array(embedded_coref), padding_value=-1)
+
         return Instance(fields)
 
     def _split_tags(self, tags: List[str], use_bio=True) -> (List[str], List[str]):
@@ -271,6 +304,14 @@ class DeftJsonlReader(DatasetReader):
         else:
             num_samples = num_deterministic_samples
         return num_samples
+
+    @staticmethod
+    def _is_in_coref_cluster(idx, clusters):
+        for cluster in clusters:
+            for span in cluster:
+                if span[0] <= idx <= span[1]:
+                    return True
+        return False
 
     def _is_majority_example(self, example: Dict[str, Any]) -> bool:
         tags = example['tags']

@@ -121,6 +121,7 @@ class JointClassifier(Model):
                 tags: torch.LongTensor = None,
                 relation_root_idxs: torch.LongTensor = None,
                 relations: torch.LongTensor = None,
+                binary_coref: torch.FloatTensor = None,
                 coarse_tags: torch.LongTensor = None,
                 modifier_tags: torch.LongTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
@@ -161,6 +162,9 @@ class JointClassifier(Model):
         embedded_text_input = self.text_field_embedder(tokens)
         batch_size, sequence_length, _ = embedded_text_input.size()
         mask = get_text_field_mask(tokens)
+
+        if binary_coref is not None:
+            embedded_text_input = torch.cat([embedded_text_input, binary_coref.unsqueeze(2)], dim=2)
 
         # Shape: batch x seq_len x emb_dim
         encoded_text = self.encoder(embedded_text_input, mask)
