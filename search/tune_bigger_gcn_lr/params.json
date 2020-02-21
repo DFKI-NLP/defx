@@ -1,0 +1,10 @@
+{
+  "LEARNING_RATE": {
+    "sampling strategy": "loguniform",
+    "bounds": [1e-6, 1e-1]
+  },
+  "ALLENNLP_SEED": {
+    "sampling strategy": "integer",
+    "bounds": [0, 9999999]
+  }
+}
