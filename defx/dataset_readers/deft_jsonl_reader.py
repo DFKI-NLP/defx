@@ -64,6 +64,8 @@ class DeftJsonlReader(DatasetReader):
         self._only_evaluated_subtask3_labels = only_evaluated_subtask3_labels
         self._read_binary_coref = read_binary_coref
         self._read_embedded_coref = read_embedded_coref
+        if self._read_embedded_coref:
+            raise NotImplementedError('coref cluster embedding not impplemented yet')
 
         # "Subtask 2 only" dataset readers should use the labels namespace
         # for the sequence tags, but others should use 'tags'
