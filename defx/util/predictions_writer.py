@@ -87,7 +87,7 @@ class PredictionsWriter:
         predictions_by_origin = itertools.groupby(predictions,
                                                   lambda x: x[0])
         for input_file, prediction_group in predictions_by_origin:
-            output_file_name = f'task_1_{input_file}'
+            output_file_name = self._get_output_file_name(input_file=input_file, subtask=1)
             output_file = Path(self._output_dir, output_file_name)
             self._write_subtask1_output_file(output_file, prediction_group)
 
@@ -121,7 +121,7 @@ class PredictionsWriter:
         predictions_by_file = itertools.groupby(predicted_instances,
                                                 key=self.get_file_name_from_iterator)
         for input_file, prediction_group in predictions_by_file:
-            output_file_name = f'task_2_{input_file}'
+            output_file_name = self._get_output_file_name(input_file=input_file, subtask=2)
             output_file = Path(self._output_dir, output_file_name)
             self._write_subtask2_output_file(output_file, list(prediction_group))
 
@@ -143,7 +143,7 @@ class PredictionsWriter:
         predictions_by_file = itertools.groupby(predicted_instances,
                                                 key=self.get_file_name_from_iterator)
         for input_file, prediction_group in predictions_by_file:
-            output_file_name = f'task_3_{input_file}'
+            output_file_name = self._get_output_file_name(input_file=input_file, subtask=3)
             output_file = Path(output_dir, output_file_name)
             self._write_subtask3_output_file(output_file, list(prediction_group))
 
@@ -182,3 +182,11 @@ class PredictionsWriter:
     @staticmethod
     def _get_instance_source_file(instance):
         return instance.get('metadata')['example_id'].split('##')[0]
+
+    @staticmethod
+    def _get_output_file_name(input_file, subtask):
+        prefix = f"task_{subtask}_"
+        if input_file.startswith(prefix):
+            return input_file
+        else:
+            return prefix + input_file
