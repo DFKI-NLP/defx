@@ -12,6 +12,7 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer
 from overrides import overrides
 
 from defx import EVALUATED_SUBTASK2_LABELS, EVALUATED_SUBTASK3_LABELS
+from defx.util.deft_to_jsonl_converter import SPACY_PATTERNS
 
 
 @DatasetReader.register('jsonl_reader')
@@ -38,6 +39,7 @@ class DeftJsonlReader(DatasetReader):
                  read_spacy_dep_heads: bool = False,
                  read_binary_coref: bool = False,
                  read_embedded_coref: bool = False,
+                 read_spacy_patterns: bool = False,
                  add_dep_self_loops: bool = True,
                  only_evaluated_subtask2_labels: bool = False,
                  only_evaluated_subtask3_labels: bool = False,
@@ -66,6 +68,7 @@ class DeftJsonlReader(DatasetReader):
         self._read_embedded_coref = read_embedded_coref
         if self._read_embedded_coref:
             raise NotImplementedError('coref cluster embedding not impplemented yet')
+        self._read_spacy_patterns = read_spacy_patterns
 
         # "Subtask 2 only" dataset readers should use the labels namespace
         # for the sequence tags, but others should use 'tags'
@@ -136,6 +139,17 @@ class DeftJsonlReader(DatasetReader):
                     binary_coref = None
                     embedded_coref = None
 
+                if self._read_spacy_patterns:
+                    pattern_keys = [pattern['pattern_flag'] for pattern in SPACY_PATTERNS]
+                    spacy_patterns = []
+                    for pattern_key in pattern_keys:
+                        field_name = 'spacy_pattern_' + pattern_key
+                        spacy_patterns.append(
+                            [float(value) for value in example_json[field_name]]
+                        )
+                else:
+                    spacy_patterns = None
+
                 instance = self.text_to_instance(
                     tokens=tokens,
                     sentence_labels=sentence_labels,
@@ -147,6 +161,7 @@ class DeftJsonlReader(DatasetReader):
                     dep_heads=dep_heads,
                     binary_coref=binary_coref,
                     embedded_coref=embedded_coref,
+                    spacy_patterns=spacy_patterns
                 )
                 if file_path.__str__().__contains__('train.jsonl') and self._oversampling_ratio is not None:
                     if self._is_majority_example(example_json):
@@ -168,7 +183,8 @@ class DeftJsonlReader(DatasetReader):
                          example_id: str = None,
                          dep_heads: List[int] = None,
                          binary_coref: List[float] = None,
-                         embedded_coref: List[int] = None,) -> Instance:
+                         embedded_coref: List[int] = None,
+                         spacy_patterns: List[List[float]] = None) -> Instance:
         # pylint: disable=arguments-differ,too-many-arguments
         assert len(tokens) > 0, 'Empty example encountered'
 
@@ -252,6 +268,10 @@ class DeftJsonlReader(DatasetReader):
         if self._read_embedded_coref:
             assert embedded_coref, 'Embedding value for coref missing'
             fields["embedded_coref"] = ArrayField(np.array(embedded_coref), padding_value=-1)
+
+        if self._read_spacy_patterns:
+            assert spacy_patterns is not None, 'spacy pattern input is missing'
+            fields["spacy_patterns"] = ArrayField(np.array(spacy_patterns), padding_value=-1.0)
 
         return Instance(fields)
 
