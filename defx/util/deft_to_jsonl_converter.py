@@ -4,10 +4,11 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, TextIO
 
-import spacy
 from allennlp.data.vocabulary import DEFAULT_PADDING_TOKEN
 from allennlp.predictors import Predictor, CorefPredictor
-from spacy.tokens import Doc
+import spacy
+from spacy.matcher import Matcher
+from spacy.tokens import Doc, Token
 from tqdm import tqdm
 
 SENTS_PER_EXAMPLE = 3
@@ -19,6 +20,40 @@ SEQUENCE_FIELDS = [
     'ner_ids',
     'relation_roots',
     'relations'
+]
+SPACY_PATTERNS = [
+    {
+        'pattern_flag': 'is_reference',
+        'patterns': [
+            [{'IS_DIGIT': False}, {'LOWER': '.'}, {'LOWER': 'this'}, {'OP': '+'}, {'LOWER': 'is'}, {'LOWER': 'called'}],
+            [{'IS_DIGIT': False}, {'LOWER': '.'}, {'LOWER': 'these'}, {'OP': '+'}, {'LOWER': 'are'}, {'LOWER': 'called'}],
+        ]
+    },
+    {
+        'pattern_flag': 'is_definition',
+        'patterns': [
+            [{'POS': {'IN': ['NOUN', 'ADJ', 'DET']}, 'OP': '+'}, {'LOWER': 'is'}, {'LOWER': {'IN': ['a', 'the']}}]
+        ],
+    },
+    {
+        'pattern_flag': 'is_alias',
+        'patterns': [
+            [{'LOWER': {'IN': [',', '(']}, 'OP': '?'}, {'LOWER': {'IN': ['formerly', 'commonly', 'also']}}, {'LOWER': 'called'}],
+            [{'LOWER': {'IN': [',', '(']}, 'OP': '?'}, {'LOWER': {'IN': ['formerly', 'commonly', 'also']}}, {'LOWER': 'known'}, {'LOWER': 'as'}]
+        ],
+    },
+    {
+        'pattern_flag': 'noisy_alias',
+        'patterns': [
+            [{'LOWER': '('}, {'LOWER': 'or', 'OP': '?'}, {'POS': {'IN': ['DET', 'ADJ', 'NOUN']}}, {'LOWER': ')'}],
+        ],
+    },
+    {
+        'pattern_flag': 'reference_keywords',
+        'patterns': [
+            [{'LOWER': '.'}, {'LOWER': {'IN': ['it', 'they', 'these', 'those']}}]
+        ],
+    },
 ]
 
 
@@ -50,8 +85,16 @@ def _convert_deft_folder(input_path: Path,
     """Convert all files in the given folder."""
     if with_spacy:
         spacy_pipeline = spacy.load('en_core_web_lg')
+        spacy_matcher = Matcher(spacy_pipeline.vocab)
+        for pattern in SPACY_PATTERNS:
+            flag = pattern['pattern_flag']
+            Token.set_extension(flag, default=False, force=True)
+            patterns = pattern['patterns']
+            callback_fn = _get_extension_labeling_fn(flag)
+            spacy_matcher.add(flag, callback_fn, *patterns)
     else:
         spacy_pipeline = None
+        spacy_matcher = None
     if with_coref:
         coref_predictor = Predictor.from_path(
             archive_path="https://s3-us-west-2.amazonaws.com/allennlp/models/coref-model-2018.02.05.tar.gz",
@@ -64,6 +107,7 @@ def _convert_deft_folder(input_path: Path,
     for input_file in tqdm(input_path.iterdir()):
         examples = _convert_deft_file(input_file,
                                       spacy_pipeline=spacy_pipeline,
+                                      spacy_matcher=spacy_matcher,
                                       coref_predictor=coref_predictor)
         for example in examples:
             output_file.write(json.dumps(example) + '\n')
@@ -71,6 +115,7 @@ def _convert_deft_folder(input_path: Path,
 
 def _convert_deft_file(input_file: Path,
                        spacy_pipeline=None,
+                       spacy_matcher=None,
                        coref_predictor: CorefPredictor=None) -> List[Dict[str, Any]]:
     """Converts a deft file into jsonl format and writes to the output file"""
     examples = []
@@ -87,6 +132,7 @@ def _convert_deft_file(input_file: Path,
 
             example = _parse_example(file_handler,
                                      spacy_pipeline=spacy_pipeline,
+                                     spacy_matcher=spacy_matcher,
                                      coref_predictor=coref_predictor)
             example['id'] = f'{input_file.name}##{example_count}'
             examples.append(example)
@@ -96,6 +142,7 @@ def _convert_deft_file(input_file: Path,
 
 def _parse_example(file_handler: TextIO,
                    spacy_pipeline=None,
+                   spacy_matcher=None,
                    coref_predictor: CorefPredictor = None) -> Dict:
     """Parses an example and does some pre-processing"""
     sentences = _parse_example_sentences(file_handler)
@@ -112,6 +159,10 @@ def _parse_example(file_handler: TextIO,
         example['spacy_tag'] = [t.tag_ for t in doc]
         example['spacy_dep_head'] = [t.head.i for t in doc]
         example['spacy_dep_rel'] = [t.dep_ for t in doc]
+        spacy_matcher(doc)
+        for pattern in SPACY_PATTERNS:
+            flag = pattern['pattern_flag']
+            example[f'spacy_pattern_{flag}'] = [t._.get(flag) for t in doc]
 
     if coref_predictor is not None:
         doc_tokens = example['tokens']
@@ -333,6 +384,16 @@ def _extract_relations(sentences: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         })
 
     return relations
+
+
+# Add a generic attribute setter
+def _get_extension_labeling_fn(extension_name):
+    def set_extension(_, doc, i, matches):
+        match_id, start, end = matches[i]
+        for token in doc[start:end]:
+            token._.set(extension_name, True)
+
+    return set_extension
 
 
 def _is_chapter_start(sentence: Dict[str, Any]):
