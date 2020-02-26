@@ -24,6 +24,8 @@ def main():
                         default=[1], help='Choose which subtasks to evaluate')
     parser.add_argument('--split', default='dev',
                         help='The dataset split for evaluation')
+    parser.add_argument('--only-eval', dest='only_eval', action='store_true',
+                        help='Only evaluate a given folder of predictions')
     parser.add_argument('--cuda-device', default=-1, type=int,
                         help='The cuda device used for predictions')
     parser.add_argument('-f', dest='force_pred', action='store_true',
@@ -45,36 +47,48 @@ def main():
         config = safe_load(cfg_file)
 
     results = []
-    for cwd, _, curr_files in os.walk(args.model_dir):
-        if 'model.tar.gz' in curr_files:
-            pred_dir = Path(cwd, f'{split}_submission')
-            model_archive = Path(cwd, 'model.tar.gz')
-            print('Evaluating model:', model_archive)
-            pred_writer = PredictionsWriter(
-                input_data=model_input,
-                output_dir=pred_dir,
-                model_archive=model_archive,
-                predictor=args.predictor,
-                subtasks=args.subtasks,
-                cuda_device=args.cuda_device,
-                task_config=config
-            )
-            if args.force_pred or pred_writer.missing_predictions():
-                pred_writer.run()  # Generate predictions and bundle a submission
+    if args.only_eval:
+        cwd = pred_dir = args.model_dir
+        result = evaluate_subtasks(args.subtasks,
+                                   gold_dir=gold_dir,
+                                   pred_dir=Path(pred_dir),
+                                   eval_config=config,
+                                   verbose=args.verbose)
 
-            if _is_challenge_dataset(split):  # Skip evaluation for submissions
-                print('Skipping evaluation for challenge test set')
-                continue
+        with Path(cwd, f'{split}_results.json').open('w') as f:
+            json.dump(result, f)
+        results.append(result)
+    else:
+        for cwd, _, curr_files in os.walk(args.model_dir):
+            if 'model.tar.gz' in curr_files:
+                pred_dir = Path(cwd, f'{split}_submission')
+                model_archive = Path(cwd, 'model.tar.gz')
+                print('Evaluating model:', model_archive)
+                pred_writer = PredictionsWriter(
+                    input_data=model_input,
+                    output_dir=pred_dir,
+                    model_archive=model_archive,
+                    predictor=args.predictor,
+                    subtasks=args.subtasks,
+                    cuda_device=args.cuda_device,
+                    task_config=config
+                )
+                if args.force_pred or pred_writer.missing_predictions():
+                    pred_writer.run()  # Generate predictions and bundle a submission
 
-            result = evaluate_subtasks(args.subtasks,
-                                       gold_dir=gold_dir,
-                                       pred_dir=pred_dir,
-                                       eval_config=config,
-                                       verbose=args.verbose)
+                if _is_challenge_dataset(split):  # Skip evaluation for submissions
+                    print('Skipping evaluation for challenge test set')
+                    continue
 
-            with Path(cwd, f'{split}_results.json').open('w') as f:
-                json.dump(result, f)
-            results.append(result)
+                result = evaluate_subtasks(args.subtasks,
+                                           gold_dir=gold_dir,
+                                           pred_dir=pred_dir,
+                                           eval_config=config,
+                                           verbose=args.verbose)
+
+                with Path(cwd, f'{split}_results.json').open('w') as f:
+                    json.dump(result, f)
+                results.append(result)
 
     assert len(results) > 0 or _is_challenge_dataset(split), 'Missing results'
     if len(results) > 1:
