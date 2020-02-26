@@ -2,6 +2,7 @@ from typing import Optional, List, Dict
 
 import torch
 import torch.nn.functional as F
+from allennlp.common import Registrable
 from allennlp.data import Vocabulary
 from allennlp.models import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
@@ -16,8 +17,8 @@ from defx.util.index_to_relation_and_type_mapping import map_relation_head_and_t
     map_index_to_relation_head_and_type
 
 
-@Model.register('relation_scorer')
-class RelationScorer(Model):
+class RelationScorer(Model, Registrable):
+    default_implementation: str = 'subtask_relation_scorer'
     """
     Takes a sequence of encoded tokens and scores all existing relations.
 
@@ -81,6 +82,12 @@ class RelationScorer(Model):
 
         initializer(self)
 
+    def forward(self, *inputs) -> Dict[str, torch.Tensor]:
+        raise NotImplementedError
+
+
+@RelationScorer.register('subtask_relation_scorer')
+class SubtaskRelationScorer(RelationScorer):
     @overrides
     def forward(self,
                 sequence: torch.LongTensor,

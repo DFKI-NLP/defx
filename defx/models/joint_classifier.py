@@ -264,8 +264,9 @@ class JointClassifier(Model):
             'ner_acc': self.ner_accuracy.get_metric(reset=reset),
             'ner_f1': self.ner_f1.get_metric(reset=reset)['f1-measure-overall'],
             're_acc': re_metrics['re_acc'],
-            're_f1': re_metrics['re_f1'],
         }
+        if 're_f1' in re_metrics:
+            joint_metrics['re_f1'] = re_metrics['re_f1']
         if self._use_aux_ner_labels:
             joint_metrics['coarse_acc'] = self._coarse_acc.get_metric(reset=reset)
             joint_metrics['modifier_acc'] = self._modifier_acc.get_metric(reset=reset)

@@ -31,6 +31,7 @@ class DeftJsonlReader(DatasetReader):
                  sample_limit: int = None,
                  split_ner_labels: bool = False,
                  aux_ner_labels: bool = False,
+                 aux_re_task: bool = False,
                  oversampling_ratio: float = None,
                  majority_description: str = None,
                  read_spacy_pos_tags: bool = True,
@@ -54,6 +55,7 @@ class DeftJsonlReader(DatasetReader):
         self._sample_limit = sample_limit
         self._split_ner_labels = split_ner_labels
         self._aux_ner_labels = aux_ner_labels
+        self._aux_re_task = aux_re_task
         self._oversampling_ratio = oversampling_ratio
         self._majority_description = majority_description
         self._read_spacy_pos_tags = read_spacy_pos_tags
@@ -113,12 +115,34 @@ class DeftJsonlReader(DatasetReader):
                 ner_ids = example_json['ner_ids'] if 'ner_ids' in example_json else None
                 relations = example_json['relations'] if 'relations' in example_json else None
                 if 'relation_roots' in example_json:
+                    assert ner_ids is not None, 'NER ids are required for RE as an auxiliary task'
+                    entity_ids = set(ner_ids)
+                    entity_ids.remove('-1')
                     relation_root_idxs = [
-                        ner_ids.index(root) if root in ner_ids else -1
+                        ner_ids.index(root) if root in entity_ids else -1
                         for root in example_json['relation_roots']
                     ]
+
+                    if self._aux_re_task:
+                        aux_relations = [['0' for _ in range(len(tokens))]
+                                         for _ in range(len(tokens))]
+                        entity_spans = {}
+                        for ner_id in entity_ids:
+                            entity_idxs = [idx
+                                           for idx, token_ner_id in enumerate(ner_ids)
+                                           if token_ner_id == ner_id]
+                            entity_spans[ner_id] = (entity_idxs[0], entity_idxs[-1] + 1)
+                        for token_idx, root_id in enumerate(example_json['relation_roots']):
+                            if root_id == '-1':
+                                continue
+                            relation_label = relations[token_idx]
+                            root_start, root_end = entity_spans[root_id]
+                            aux_relations[token_idx][root_start:root_end] = [relation_label] * (root_end - root_start)
+                    else:
+                        aux_relations = None
                 else:
                     relation_root_idxs = None
+                    aux_relations = None
 
                 if self._read_binary_coref or self._read_embedded_coref:
                     assert 'coref_clusters' in example_json, 'coref annotations are missing'
@@ -144,6 +168,7 @@ class DeftJsonlReader(DatasetReader):
                     relations=relations,
                     ner_ids=ner_ids,
                     relation_root_idxs=relation_root_idxs,
+                    aux_relations=aux_relations,
                     dep_heads=dep_heads,
                     binary_coref=binary_coref,
                     embedded_coref=embedded_coref,
@@ -164,6 +189,7 @@ class DeftJsonlReader(DatasetReader):
                          ner_ids: List[str] = None,
                          sentence_labels: List[Dict] = None,
                          relation_root_idxs: List[int] = None,
+                         aux_relations: List[List[str]] = None,
                          relations: List[str] = None,
                          example_id: str = None,
                          dep_heads: List[int] = None,
@@ -218,7 +244,7 @@ class DeftJsonlReader(DatasetReader):
                     label_namespace=self._tags_namespace)
                 fields['tags'] = tags_field
 
-        if relation_root_idxs and 3 in self._subtasks:
+        if relation_root_idxs and 3 in self._subtasks and not self._aux_re_task:
             if self._only_evaluated_subtask3_labels:
                 relation_root_idxs = [
                     root_idx if relations[idx] in EVALUATED_SUBTASK3_LABELS else 0
@@ -228,7 +254,7 @@ class DeftJsonlReader(DatasetReader):
                                          for root_idx in relation_root_idxs])
             fields['relation_root_idxs'] = root_idxs_field
 
-        if relations and 3 in self._subtasks:
+        if relations and 3 in self._subtasks and not self._aux_re_task:
             if self._only_evaluated_subtask3_labels:
                 relations = [
                     relation if relation in EVALUATED_SUBTASK3_LABELS else '0'
@@ -239,6 +265,16 @@ class DeftJsonlReader(DatasetReader):
                 sequence_field=text_field,
                 label_namespace='relation_labels'
             )
+
+        if aux_relations and 3 in self._subtasks and self._aux_re_task:
+            assert not self._only_evaluated_subtask3_labels, 'Only eval labels not supported for auxialiary task re'
+            aux_relations_list_field = ListField([
+                SequenceLabelField(labels=aux_token_relations,
+                                   sequence_field=text_field,
+                                   label_namespace='relation_labels')
+                for aux_token_relations in aux_relations
+            ])
+            fields['relations'] = aux_relations_list_field
 
         if self._read_spacy_dep_heads:
             assert dep_heads is not None, 'Dependency head indexes are missing'

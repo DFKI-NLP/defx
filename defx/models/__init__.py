@@ -1,6 +1,7 @@
 from defx.models.subtask1_classifier_wrapper import Subtask1ClassifierWrapper
 from defx.models.subtask3_classifier_with_gold_ner import Subtask3ClassifierWithGoldNer
 from defx.models.relation_scorer import RelationScorer
+from defx.models.aux_relation_scorer import AuxiliaryRelationScorer
 from defx.models.joint_classifier import JointClassifier
 from defx.models.subtask2_split_simple_tagger import Subtask2SplitSimpleTagger
 from defx.models.syntactic_simple_tagger import SyntacticSimpleTagger
