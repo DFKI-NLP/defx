@@ -43,12 +43,12 @@ class JointClassifier(Model):
     def __init__(self,
                  vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
-                 ner_tag_embedder: TokenEmbedder,
                  encoder: Seq2SeqEncoder,
                  relation_scorer: RelationScorer,
                  ner_tag_namespace: str = 'tags',
                  evaluated_ner_labels: List[str] = None,
                  re_loss_weight: float = 1.0,
+                 ner_tag_embedder: TokenEmbedder = None,
                  use_aux_ner_labels: bool = False,
                  aux_coarse_namespace: str = 'coarse_tags',
                  aux_modifier_namespace: str = 'modifier_tags',
@@ -192,8 +192,13 @@ class JointClassifier(Model):
             coarse_logits = self._coarse_projection_layer(encoded_text)
             modifier_logits = self._modifier_projection_layer(encoded_text)
 
-        embedded_tags = self.ner_tag_embedder(predicted_ner_tags_tensor)
-        encoded_sequence = torch.cat([encoded_text, embedded_tags], dim=2)
+        if self.ner_tag_embedder is not None:
+            embedded_tags = self.ner_tag_embedder(predicted_ner_tags_tensor)
+            encoded_sequence = torch.cat([encoded_text, embedded_tags], dim=2)
+        else:
+            encoded_sequence = torch.cat([encoded_text,
+                                          ner_logits,
+                                          predicted_ner_tags_tensor.unsqueeze(2).float()], dim=2)
 
         re_output = self.relation_scorer(encoded_sequence,
                                          mask,
