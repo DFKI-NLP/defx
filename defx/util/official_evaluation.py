@@ -14,8 +14,9 @@ from evaluation_sub3 import evaluate as task3_evaluate
 from evaluation_sub3 import has_relation, get_relation, get_relation_from, get_relation_to
 
 
-def evaluate_subtasks(subtasks, gold_dir, pred_dir, eval_config, verbose=False):
+def evaluate_subtasks(subtasks, gold_dir, pred_dir, eval_config, verbose=False, quiet=False):
     result = {}
+    assert not (quiet and verbose)
     for subtask in subtasks:
         eval_labels = eval_config[f'task_{subtask}']['eval_labels']
         task_report = _evaluate_subtask(subtask=subtask,
@@ -26,7 +27,8 @@ def evaluate_subtasks(subtasks, gold_dir, pred_dir, eval_config, verbose=False):
             print(f'Subtask {subtask} report:')
             pprint(task_report)
         f1_score = _get_f1_score(task_report, subtask=subtask)
-        print(f'Subtask {subtask} score: {f1_score * 100:.2f} F1')
+        if not quiet:
+            print(f'Subtask {subtask} score: {f1_score * 100:.2f} F1')
         result[f'subtask{subtask}'] = task_report
     return result
 
