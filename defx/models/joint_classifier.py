@@ -122,6 +122,7 @@ class JointClassifier(Model):
                 relation_root_idxs: torch.LongTensor = None,
                 relations: torch.LongTensor = None,
                 binary_coref: torch.FloatTensor = None,
+                spacy_patterns: torch.FloatTensor = None,
                 coarse_tags: torch.LongTensor = None,
                 modifier_tags: torch.LongTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
@@ -163,11 +164,18 @@ class JointClassifier(Model):
         batch_size, sequence_length, _ = embedded_text_input.size()
         mask = get_text_field_mask(tokens)
 
+        encoder_input_tensors = [embedded_text_input]
         if binary_coref is not None:
-            embedded_text_input = torch.cat([embedded_text_input, binary_coref.unsqueeze(2)], dim=2)
+            encoder_input_tensors.append(binary_coref.unsqueeze(2))
+        if spacy_patterns is not None:
+            encoder_input_tensors.append(spacy_patterns.permute(0, 2, 1))
+        if len(encoder_input_tensors) > 1:
+            encoder_input = torch.cat(encoder_input_tensors, dim=2)
+        else:
+            encoder_input = encoder_input_tensors[0]
 
         # Shape: batch x seq_len x emb_dim
-        encoded_text = self.encoder(embedded_text_input, mask)
+        encoded_text = self.encoder(encoder_input, mask)
 
         ner_logits = self.tag_projection_layer(encoded_text)
         best_ner_paths = self.crf.viterbi_tags(ner_logits, mask)
