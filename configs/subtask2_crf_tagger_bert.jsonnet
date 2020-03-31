@@ -1,5 +1,5 @@
 local char_num_filters = 128;
-local dropout = 0.3767912341549483;
+local dropout = 0.3;
 local SEED = std.parseInt(std.extVar("ALLENNLP_SEED"));
 local bert_model = "bert-base-uncased";
 
