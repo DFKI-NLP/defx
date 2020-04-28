@@ -1,34 +1,44 @@
 # Joint Extraction of Concepts and Relations for Definition Extraction
 Source code for the submission on the shared task of Semeval 2020 Task 8 (DeftEval): Extracting term-definition pairs on the DEFT Corpus, an english textbook corpus.
 
-### Package requirements
+### Prerequisites
 Tested with **Python 3.7.4**:
 ```
 pip install -r requirements.txt
 python -m spacy download en_core_web_lg
 ```
 
-### Preprocessing
+### Preprocessing the data
 
-Clone the deft corpus
+Clone the deft corpus:
 ```
 git clone https://github.com/adobe-research/deft_corpus data/deft_corpus
 ```
 
-Run the preprocessing script
+Run the preprocessing script:
 ```
-bash scripts/preprocess.sh
+CUDA_VISIBLE_DEVICES=0 bash scripts/preprocess.sh
 ```
 
 ### Training a new model
 
+Set the random seed (ALLENNLP_SEED) and the cuda device (ALLENNLP_DEVICE) for training:
 ```
-ALLENNLP_SEED=0 ALLENNLP_DEVICE=-1 allennlp train configs/subtask1_basic_debug.jsonnet --include-package defx -s data/runs/subtask1_example
+CUDA_VISIBLE_DEVICES=0 \
+ALLENNLP_SEED=0 \
+ALLENNLP_DEVICE=0 \
+allennlp train configs/joint_bert_classifier.jsonnet \
+  --include-package defx \
+  -s data/runs/joint_model
 ```
 
-### Evaluate a model
+### Evaluating a trained model
 ```
-python scripts/evaluate.py --cuda-device <device-id> <model-dir> --subtasks <1-3> --split <dev/test>
+python scripts/evaluate.py \
+  --cuda-device -1 \
+  --subtasks 2 \
+  --split dev \
+  data/runs/joint_model
 ```
 
 ### Running a demo
