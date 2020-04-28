@@ -64,6 +64,8 @@ def main():
     parser.add_argument('output', help='Jsonl output file')
     parser.add_argument('-f', dest='force_output', action='store_true',
                         help='force creation of a new output file')
+    parser.add_argument('--cuda_device', type=int, default=-1,
+                        help='Cuda device to use in preprocessing steps')
     args = parser.parse_args()
 
     output_file = Path(args.output)
@@ -75,11 +77,12 @@ def main():
     assert input_path.exists() and input_path.is_dir()
 
     with output_file.open('w') as output_file_handler:
-        _convert_deft_folder(input_path, output_file_handler)
+        _convert_deft_folder(input_path, output_file_handler, cuda_device=args.cuda_device)
 
 
 def _convert_deft_folder(input_path: Path,
                          output_file: TextIO,
+                         cuda_device: int,
                          with_spacy: bool = True,
                          with_coref: bool = True) -> None:
     """Convert all files in the given folder."""
@@ -98,7 +101,7 @@ def _convert_deft_folder(input_path: Path,
     if with_coref:
         coref_predictor = Predictor.from_path(
             archive_path="https://s3-us-west-2.amazonaws.com/allennlp/models/coref-model-2018.02.05.tar.gz",
-            cuda_device=-1
+            cuda_device=cuda_device
         )
         # Fix issues with characters tokens smaller than the biggest convolution size
         coref_predictor._dataset_reader._token_indexers['token_characters']._min_padding_length = 5
