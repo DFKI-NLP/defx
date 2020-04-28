@@ -1,7 +1,5 @@
-# Semeval 2020 Task 6
-DeftEval: Extracting term-definition pairs in free text
-
-## Prerequisites
+# Joint Extraction of Concepts and Relations for Definition Extraction
+Source code for the submission on the shared task of Semeval 2020 Task 8 (DeftEval): Extracting term-definition pairs on the DEFT Corpus, an english textbook corpus.
 
 ### Package requirements
 Tested with **Python 3.7.4**:
@@ -10,31 +8,32 @@ pip install -r requirements.txt
 python -m spacy download en_core_web_lg
 ```
 
-### Clone the deft corpus
+### Preprocessing
+
+Clone the deft corpus
 ```
 git clone https://github.com/adobe-research/deft_corpus data/deft_corpus
 ```
 
-### Run preprocessing
+Run the preprocessing script
 ```
 bash scripts/preprocess.sh
 ```
 
-## Training a new model
+### Training a new model
 
-### Run the training
 ```
 ALLENNLP_SEED=0 ALLENNLP_DEVICE=-1 allennlp train configs/subtask1_basic_debug.jsonnet --include-package defx -s data/runs/subtask1_example
 ```
 
-### Evaluate the model and generate a submission
+### Evaluate a model
 ```
 python scripts/evaluate.py --cuda-device <device-id> <model-dir> --subtasks <1-3> --split <dev/test>
 ```
 
-## Running a demo
+### Running a demo
 
 ```
 pip install streamlit
-streamlit run streamlit_demo.py -- data/runs/joint_bert_classifier/model.tar.gz
+streamlit run streamlit_demo.py -- <model-dir>/model.tar.gz
 ```
