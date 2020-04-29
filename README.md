@@ -35,7 +35,7 @@ allennlp train configs/joint_bert_classifier.jsonnet \
 ### Evaluating a trained model
 ```
 python scripts/evaluate.py \
-  --cuda-device -1 \
+  --cuda-device 0 \
   --subtasks 2 \
   --split dev \
   data/runs/joint_model
@@ -45,5 +45,5 @@ python scripts/evaluate.py \
 
 ```
 pip install streamlit
-streamlit run streamlit_demo.py -- <model-dir>/model.tar.gz
+streamlit run streamlit_demo.py -- data/runs/joint_model/model.tar.gz
 ```
