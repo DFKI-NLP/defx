@@ -1,5 +1,5 @@
 # Joint Extraction of Concepts and Relations for Definition Extraction
-Source code for the submission on the shared task of Semeval 2020 Task 8 (DeftEval): Extracting term-definition pairs on the DEFT Corpus, an english textbook corpus. The accompanying paper by Marc Hübner, Christoph Alt, Robert Schwarzenberg, Leonhard Hennig can be found here: https://www.aclweb.org/anthology/2020.semeval-1.92/
+Source code for the submission on the shared task of Semeval 2020 Task 8 (DeftEval): Extracting term-definition pairs on the DEFT Corpus, an english textbook corpus. The accompanying paper "Defx at SemEval-2020 Task 6: Joint Extraction of Concepts and Relations for Definition Extraction" by Marc Hübner, Christoph Alt, Robert Schwarzenberg, Leonhard Hennig can be found here: https://www.aclweb.org/anthology/2020.semeval-1.92/
 
 ### Prerequisites
 Tested with **Python 3.7.4**:
